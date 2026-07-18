@@ -36,16 +36,22 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </head>
 <body>
 <div class="app">
-<header><h1>時間の塊</h1><div class="sub">メイン色だけ選んで、まず開始。サブ色と内容は途中・あとから追加できます。</div></header>
+<header><h1>時間の塊</h1><div class="sub">名前なしの12色に加えて、メインもサブも好きな色を何個でも追加できます。最近使ったメイン色ほど上に並びます。</div></header>
 
 <section class="card now">
   <div class="status" id="status">メイン色を選んでスタート</div>
   <div class="timer" id="timer">00:00:00</div>
 
-  <div class="picker-title"><b>メイン色</b><button class="smallbtn" onclick="openProfiles('main')">色・名前を編集</button></div>
+  <div class="picker-title"><b>メイン色</b><button class="smallbtn" onclick="openProfiles('main')">＋ 色を追加・編集</button></div>
   <div class="chips" id="mainPicker"></div>
 
-  <div class="picker-title"><b>サブ色（開始後でも選べます）</b><button class="smallbtn" onclick="clearSub()">選択解除</button></div>
+  <div class="picker-title">
+  <b>サブ色（開始後でも選べます）</b>
+  <div class="row">
+    <button class="smallbtn" onclick="openProfiles('sub')">＋ 色を追加・編集</button>
+    <button class="smallbtn" onclick="clearSub()">選択解除</button>
+  </div>
+</div>
   <div class="chips" id="subPicker"></div>
 
   <div class="selection-preview">
@@ -96,7 +102,10 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <dialog id="profilesDialog"><div class="dialog-inner">
 <h2 id="profilesTitle">色・名前を編集</h2>
 <div class="profile-list" id="profileList"></div>
-<div class="row" style="margin-top:12px"><button class="smallbtn" id="addProfile">＋ 追加</button></div>
+<div class="row" style="margin-top:12px">
+  <button class="smallbtn" id="addProfile">＋ 新しい色を追加</button>
+</div>
+<p class="hint">名前は空欄のままでも保存できます。色だけ追加して、あとから名前を付けられます。</p>
 <div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('profilesDialog').close()">閉じる</button><button class="smallbtn" id="saveProfiles">保存</button></div>
 </div></dialog>
 
@@ -104,10 +113,44 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 const $=id=>document.getElementById(id);
 const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2";
 const defaultProfiles={
- main:[{id:"blue",name:"青木さん",color:"#3777c8"},{id:"green",name:"漫画",color:"#3f9863"},{id:"orange",name:"仕事",color:"#d88738"},{id:"pink",name:"生活",color:"#c85e89"}],
+ main:[
+  {id:"blue",name:"青木さん",color:"#3777c8"},
+  {id:"green",name:"漫画",color:"#3f9863"},
+  {id:"orange",name:"仕事",color:"#d88738"},
+  {id:"pink",name:"生活",color:"#c85e89"},
+  {id:"blank-red",name:"",color:"#d95c58"},
+  {id:"blank-yellow",name:"",color:"#d8ad3f"},
+  {id:"blank-aqua",name:"",color:"#45aeb0"},
+  {id:"blank-purple",name:"",color:"#8066b6"},
+  {id:"blank-brown",name:"",color:"#94715e"},
+  {id:"blank-gray",name:"",color:"#75808c"},
+  {id:"blank-lime",name:"",color:"#8EBB4A"},
+  {id:"blank-navy",name:"",color:"#496B9B"},
+  {id:"blank-coral",name:"",color:"#E07A5F"},
+  {id:"blank-mint",name:"",color:"#6FBFA7"},
+  {id:"blank-lavender",name:"",color:"#A58BC6"},
+  {id:"blank-black",name:"",color:"#4A4A4A"}
+ ],
  sub:[{id:"twitter",name:"Twitter",color:"#4f9be8"},{id:"movie",name:"映画",color:"#7459b8"},{id:"comment",name:"コメント",color:"#d05a79"},{id:"sleep",name:"寝起き",color:"#7893a8"}]
 };
 let profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")||defaultProfiles;
+const extraBlankMainColors=[
+ {id:"blank-red",name:"",color:"#d95c58"},
+ {id:"blank-yellow",name:"",color:"#d8ad3f"},
+ {id:"blank-aqua",name:"",color:"#45aeb0"},
+ {id:"blank-purple",name:"",color:"#8066b6"},
+ {id:"blank-brown",name:"",color:"#94715e"},
+ {id:"blank-gray",name:"",color:"#75808c"},
+ {id:"blank-lime",name:"",color:"#8EBB4A"},
+ {id:"blank-navy",name:"",color:"#496B9B"},
+ {id:"blank-coral",name:"",color:"#E07A5F"},
+ {id:"blank-mint",name:"",color:"#6FBFA7"},
+ {id:"blank-lavender",name:"",color:"#A58BC6"},
+ {id:"blank-black",name:"",color:"#4A4A4A"}
+];
+for(const p of extraBlankMainColors){
+ if(!profiles.main.some(x=>x.id===p.id)) profiles.main.push({...p});
+}
 let logs=JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
 let oldLogs=JSON.parse(localStorage.getItem("work_logs_v1")||"[]");
 if(!logs.length && oldLogs.length){logs=oldLogs.map(x=>({id:x.id,start:x.start,end:x.end,mainId:"legacy_"+x.color,subId:"",memo:x.task||"",legacyColor:x.color}));localStorage.setItem(LOG_KEY,JSON.stringify(logs))}
@@ -122,9 +165,27 @@ const toLocal=ts=>{let d=new Date(ts-d.getTimezoneOffset()*60000);return d.toISO
 const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id,log)=>profiles[kind].find(p=>p.id===id)||(id&&id.startsWith("legacy_")?{id,name:"旧データ",color:log?.legacyColor||"#888"}:null);
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
-function chipHTML(p,selected,kind){return `<button class="chip ${kind==="sub"?"sub":""} ${p.id===selected?'selected':''}" data-id="${p.id}"><span class="color-disc" style="background:${p.color}"></span><span class="chip-label">${esc(p.name)}</span></button>`}
+function chipHTML(p,selected,kind){
+ const label=p.name||"名前なし";
+ return `<button class="chip ${kind==="sub"?"sub":""} ${p.id===selected?'selected':''}" data-id="${p.id}" aria-label="${escAttr(label)}" title="${escAttr(label)}"><span class="color-disc" style="background:${p.color}"></span>${p.name?`<span class="chip-label">${esc(p.name)}</span>`:""}</button>`
+}
+function mainProfilesByRecentUse(){
+ const latest=new Map();
+ for(const l of logs){
+   const t=Number(l.start)||0;
+   if(t>(latest.get(l.mainId)||0)) latest.set(l.mainId,t);
+ }
+ if(running){
+   const t=Number(running.start)||Date.now();
+   if(t>(latest.get(running.mainId)||0)) latest.set(running.mainId,t);
+ }
+ return profiles.main
+   .map((p,index)=>({p,index,last:latest.get(p.id)||0}))
+   .sort((a,b)=>(b.last-a.last)||(a.index-b.index))
+   .map(x=>x.p);
+}
 function renderPickers(){
- $("mainPicker").innerHTML=profiles.main.map(p=>chipHTML(p,selectedMain,"main")).join("");
+ $("mainPicker").innerHTML=mainProfilesByRecentUse().map(p=>chipHTML(p,selectedMain,"main")).join("");
  $("subPicker").innerHTML=profiles.sub.map(p=>chipHTML(p,selectedSub,"sub")).join("");
  [...$("mainPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedMain=b.dataset.id;renderAll()}});
  [...$("subPicker").children].forEach(b=>b.onclick=()=>{
@@ -153,13 +214,13 @@ function renderTimeline(kind){
  box.innerHTML=list.map(l=>{let p=getP(kind,l[kind+"Id"],l),w=Math.max(3,(l.end-l.start)/total*100),label=`${fmtTime(l.start)} ${fmtDur(l.end-l.start)}`;return `<div class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'未選択')} ${label}" style="width:${w}%;background:${p?.color||'#d8d0c8'}">${w>13?label:""}</div>`}).join("")
 }
 function renderFilters(){
- $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join("");
- $("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join("")
+ $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
+ $("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("")
 }
 function setFilter(m,s){if(m!==null)filterMain=m;if(s!==null)filterSub=s;renderAll()}
 function renderLogs(){
  let list=visibleLogs().slice().reverse(); if(!list.length){$("logs").innerHTML='<div class="empty">まだ履歴なし</div>';return}
- $("logs").innerHTML=list.map(l=>{let m=getP("main",l.mainId,l),s=getP("sub",l.subId,l);return `<div class="log" onclick="openEdit('${l.id}')" style="cursor:pointer"><div class="log-main"><div class="swatches"><span class="swatch" style="background:${m?.color||'#ccc'}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div><div style="flex:1"><div class="log-title">${esc(m?.name||"未選択")}${s?` ／ ${esc(s.name)}`:""}</div><div class="meta">${esc(l.memo||"内訳なし")}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}<br><b>タップして編集</b></div><div class="actions"><button class="smallbtn" onclick="event.stopPropagation();openEdit('${l.id}')">編集</button><button class="smallbtn danger" onclick="event.stopPropagation();deleteLog('${l.id}')">削除</button></div></div></div></div>`}).join("")
+ $("logs").innerHTML=list.map(l=>{let m=getP("main",l.mainId,l),s=getP("sub",l.subId,l);return `<div class="log" onclick="openEdit('${l.id}')" style="cursor:pointer"><div class="log-main"><div class="swatches"><span class="swatch" style="background:${m?.color||'#ccc'}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div><div style="flex:1"><div class="log-title">${esc(m?.name||"名前なし")}${s?` ／ ${esc(s.name)}`:""}</div><div class="meta">${esc(l.memo||"内訳なし")}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}<br><b>タップして編集</b></div><div class="actions"><button class="smallbtn" onclick="event.stopPropagation();openEdit('${l.id}')">編集</button><button class="smallbtn danger" onclick="event.stopPropagation();deleteLog('${l.id}')">削除</button></div></div></div></div>`}).join("")
 }
 function updateRunning(){
  let p=getP("main",running?.mainId||selectedMain,running);
@@ -171,7 +232,7 @@ function updateRunning(){
  $("previewSubText").textContent=s?`サブ：${s.name}`:"サブなし";
  $("mainBtn").style.background=p?.color||"#555";
  if(running){
-   $("status").textContent=`計測中：${p?.name||"未選択"}　${fmtTime(running.start)}開始`;
+   $("status").textContent=`計測中：${p?.name||"名前なし"}　${fmtTime(running.start)}開始`;
    $("timer").textContent=fmtTimer(Date.now()-running.start);
    $("mainBtn").textContent="■ ストップ";
  }else{
@@ -192,8 +253,8 @@ function openEdit(id){
  $("editMemo").value=l.memo||"";
  $("editStart").value=toLocal(l.start);
  $("editEnd").value=toLocal(l.end);
- $("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name)}</option>`).join("");
- $("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name)}</option>`).join("");
+ $("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
+ $("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
  $("editDialog").showModal();
 }
 $("saveEdit").onclick=()=>{
@@ -223,10 +284,37 @@ $("editLatestBtn").onclick=()=>{
  openEdit(list[list.length-1].id);
 }
 function openProfiles(mode){profileMode=mode;$("profilesTitle").textContent=(mode==="main"?"メイン":"サブ")+"の色・名前を編集";renderProfileRows();$("profilesDialog").showModal()}
-function renderProfileRows(){ $("profileList").innerHTML=profiles[profileMode].map((p,i)=>`<div class="profile-row"><input type="color" value="${p.color}" data-i="${i}" data-k="color"><input value="${escAttr(p.name)}" data-i="${i}" data-k="name"><button class="smallbtn danger" onclick="removeProfile(${i})">削除</button></div>`).join("")}
+function renderProfileRows(){
+ $("profileList").innerHTML=profiles[profileMode].map((p,i)=>`
+  <div class="profile-row">
+   <input type="color" value="${p.color}" data-i="${i}" data-k="color" aria-label="色を選ぶ">
+   <input value="${escAttr(p.name)}" data-i="${i}" data-k="name" placeholder="名前なしでもOK">
+   <button class="smallbtn danger" onclick="removeProfile(${i})">削除</button>
+  </div>`).join("");
+}
 function removeProfile(i){if(profiles[profileMode].length<=1){alert("最低1つは残してください");return}profiles[profileMode].splice(i,1);renderProfileRows()}
-$("addProfile").onclick=()=>{profiles[profileMode].push({id:crypto.randomUUID?.()||String(Date.now()),name:"新しい項目",color:"#888888"});renderProfileRows()}
-$("saveProfiles").onclick=()=>{document.querySelectorAll("#profileList input").forEach(el=>profiles[profileMode][+el.dataset.i][el.dataset.k]=el.value.trim()||"名称なし");if(!profiles.main.some(p=>p.id===selectedMain))selectedMain=profiles.main[0]?.id||"";if(!profiles.sub.some(p=>p.id===selectedSub))selectedSub="";save();$("profilesDialog").close();renderAll()}
+const addColorPalette=["#D95C58","#D8AD3F","#45AEB0","#8066B6","#8EBB4A","#496B9B","#E07A5F","#6FBFA7","#A58BC6","#C85E89","#3777C8","#3F9863"];
+$("addProfile").onclick=()=>{
+ const used=profiles[profileMode].length;
+ profiles[profileMode].push({
+   id:crypto.randomUUID?.()||String(Date.now()+Math.random()),
+   name:"",
+   color:addColorPalette[used%addColorPalette.length]
+ });
+ renderProfileRows();
+ const rows=$("profileList").querySelectorAll(".profile-row");
+ rows[rows.length-1]?.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("saveProfiles").onclick=()=>{
+ document.querySelectorAll("#profileList input").forEach(el=>{
+   profiles[profileMode][+el.dataset.i][el.dataset.k]=el.dataset.k==="name"?el.value.trim():el.value;
+ });
+ if(!profiles.main.some(p=>p.id===selectedMain))selectedMain=profiles.main[0]?.id||"";
+ if(!profiles.sub.some(p=>p.id===selectedSub))selectedSub="";
+ save();
+ $("profilesDialog").close();
+ renderAll();
+}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function escAttr(s){return esc(s)}
 function renderAll(){renderPickers();renderFilters();renderTimeline("main");renderTimeline("sub");renderLogs();updateRunning()}
