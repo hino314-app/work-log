@@ -391,9 +391,12 @@ let swipeStart=null;
 $("timelineScale").onpointerdown=e=>{swipeStart={x:e.clientX,hour:dayStartHour};e.currentTarget.setPointerCapture(e.pointerId)};
 $("timelineScale").onpointermove=e=>{if(!swipeStart)return;let step=Math.round((e.clientX-swipeStart.x)/18),next=(swipeStart.hour+step+24)%24;if(next!==dayStartHour){dayStartHour=next;save();renderAll()}};
 $("timelineScale").onpointerup=$("timelineScale").onpointercancel=()=>swipeStart=null;
+$("timelineScale").ontouchstart=e=>{let t=e.touches[0];swipeStart={x:t.clientX,hour:dayStartHour}};
+$("timelineScale").ontouchmove=e=>{if(!swipeStart)return;e.preventDefault();let t=e.touches[0],step=Math.round((t.clientX-swipeStart.x)/14),next=(swipeStart.hour+step+24)%24;if(next!==dayStartHour){dayStartHour=next;save();renderAll()}};
+$("timelineScale").ontouchend=$("timelineScale").ontouchcancel=()=>swipeStart=null;
 function renderDayStart(){$("timelineScale").innerHTML=[0,6,12,18,24].map(n=>`<span>${(dayStartHour+n)%24}時</span>`).join("")}
 function renderAll(){renderPickers();renderFilters();renderDayStart();renderTimeline("main");renderTimeline("sub");renderLogs();updateRunning()}
 setInterval(()=>{updateRunning();if(running){renderTimeline("main");renderTimeline("sub")}},1000);renderAll();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");
+// 更新時に古い画面を残さないため、この版ではオフラインキャッシュを使いません。
 </script>
 </body></html>
