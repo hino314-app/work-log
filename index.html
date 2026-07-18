@@ -27,7 +27,7 @@ button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:8px 8p
 .preview-text{font-weight:850}.preview-subtext{font-size:13px;color:var(--muted);margin-top:2px}
 .smallbtn{border:1px solid var(--line);background:white;border-radius:11px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:750}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
 label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,select{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:13px;padding:12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{display:flex;min-height:40px;border-radius:13px;overflow:hidden;background:#eee2d7;border:1px solid var(--line)}.seg{min-width:5px;display:flex;align-items:center;justify-content:center;padding:0 3px;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden}
+.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{position:relative;height:42px;border-radius:13px;overflow:hidden;background:#f3ece5;border:1px solid var(--line)}.hour-guide{position:absolute;top:0;bottom:0;width:1px;background:rgba(90,75,65,.10);pointer-events:none}.seg{position:absolute;top:0;height:100%;min-width:1px;border:0;padding:0 2px;display:flex;align-items:center;justify-content:center;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;cursor:pointer}
 .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px}.filter{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:white;padding:7px 10px}.filter.active{outline:2px solid #2c2520}
 .log{border-top:1px solid var(--line);padding:12px 0}.log:first-child{border-top:0}.log-main{display:flex;gap:10px}.swatches{display:flex;gap:3px;padding-top:3px}.swatch{width:15px;height:21px;border-radius:5px}.log-title{font-weight:850}.actions{display:flex;gap:7px;margin-top:8px}.empty{text-align:center;color:var(--muted);padding:20px 6px}
 dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
@@ -43,11 +43,12 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
   header .sub{display:none}
 }
 
+.timeline-scale{display:flex;justify-content:space-between;margin:2px 1px 0;color:var(--muted);font-size:10px}
 </style>
 </head>
 <body>
 <div class="app">
-<header><h1>時間の塊</h1><div class="sub">色は一覧からワンタップ。サブは選択中の色をもう一度押すと解除できます。</div></header>
+<header><h1>時間の塊</h1><div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div></header>
 
 <section class="card now">
   <div class="status" id="status">メイン色を選んでスタート</div>
@@ -83,9 +84,10 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 
 <section class="card">
   <div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div>
+  <div class="timeline-scale"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
   <div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div>
   <div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div>
-  <p class="hint">バーの長さは実際の作業時間に比例します。短い記録もタップすると編集できます。</p>
+  <p class="hint">横幅全体が今日の24時間です。何も記録していない時間は空欄になります。色の部分をタップすると編集できます。</p>
 </section>
 
 <section class="card">
@@ -229,20 +231,40 @@ function visibleLogs(){return todayLogs().filter(l=>(filterMain==="all"||l.mainI
 function renderTimeline(kind){
  let list=visibleLogs();
  if(kind==="sub") list=list.filter(l=>l.subId);
+
  const box=$(kind+"Timeline");
- const total=list.reduce((sum,l)=>sum+Math.max(0,l.end-l.start),0);
- $(kind+"Total").textContent=list.length?fmtDur(total):"";
- if(!list.length||total<=0){
-   box.innerHTML='<div class="empty" style="width:100%">記録なし</div>';
-   return;
- }
- box.innerHTML=list.map(l=>{
+ const dayStart=new Date();
+ dayStart.setHours(0,0,0,0);
+ const startMs=dayStart.getTime();
+ const dayMs=24*60*60*1000;
+ const endMs=startMs+dayMs;
+
+ const total=list.reduce((sum,l)=>{
+   const start=Math.max(Number(l.start)||0,startMs);
+   const end=Math.min(Number(l.end)||0,endMs);
+   return sum+Math.max(0,end-start);
+ },0);
+ $(kind+"Total").textContent=total>0?fmtDur(total):"";
+
+ const guides=Array.from({length:25},(_,hour)=>
+   `<span class="hour-guide" style="left:${hour/24*100}%"></span>`
+ ).join("");
+
+ const segments=list.map(l=>{
+   const start=Math.max(Number(l.start)||0,startMs);
+   const end=Math.min(Number(l.end)||0,endMs);
+   const duration=Math.max(0,end-start);
+   if(duration<=0)return "";
+
    const p=getP(kind,l[kind+"Id"],l);
-   const duration=Math.max(0,l.end-l.start);
-   const ratio=duration/total;
-   const label=`${fmtTime(l.start)} ${fmtDur(duration)}`;
-   return `<div class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'名前なし')} ${label}" style="flex:${duration} 1 0;background:${p?.color||'#d8d0c8'}">${ratio>=0.13?label:""}</div>`;
+   const left=(start-startMs)/dayMs*100;
+   const width=duration/dayMs*100;
+   const label=`${fmtTime(l.start)} ${fmtDur((Number(l.end)||0)-(Number(l.start)||0))}`;
+
+   return `<button class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'名前なし')} ${label}" style="left:${left}%;width:${width}%;background:${p?.color||'#d8d0c8'}">${width>=9?label:""}</button>`;
  }).join("");
+
+ box.innerHTML=guides+segments;
 }
 function renderFilters(){
  $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
