@@ -10,21 +10,22 @@
 <style>
 :root{--bg:#f7f3ee;--card:#fffaf4;--text:#2c2520;--muted:#7b6d62;--line:#eadfd3;--danger:#b94b4b;--shadow:0 10px 30px rgba(67,48,32,.10)}
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:linear-gradient(180deg,#fbf7f2,#f1e8df);color:var(--text);min-height:100vh}
-button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:18px 14px 70px}header{padding:8px 4px 16px}h1{margin:0;font-size:27px}.sub,.hint,.meta{color:var(--muted);font-size:13px;line-height:1.55}.card{background:rgba(255,250,244,.96);border:1px solid var(--line);border-radius:22px;padding:17px;box-shadow:var(--shadow);margin-bottom:14px}
-.now{text-align:center}.status{font-size:14px;color:var(--muted)}.timer{font-variant-numeric:tabular-nums;font-size:42px;font-weight:850;letter-spacing:.04em;margin:7px 0 14px}
-.picker-title{display:flex;justify-content:space-between;align-items:center;margin:12px 0 7px}.picker-title b{font-size:14px}.chips{display:flex;gap:14px;overflow-x:auto;padding:8px 2px 12px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;border:0;background:transparent;padding:0;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:7px;min-width:62px}
-.color-disc{width:58px;height:58px;border-radius:50%;border:4px solid transparent;box-shadow:0 5px 14px rgba(0,0,0,.12)}
-.chip.sub .color-disc{width:42px;height:42px}
-.chip.selected .color-disc{border-color:#2c2520;box-shadow:0 0 0 4px white,0 6px 16px rgba(0,0,0,.18);transform:scale(1.06)}
-.chip-label{font-size:13px;white-space:nowrap}
+button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:8px 8px 60px}header{padding:3px 4px 7px}h1{margin:0;font-size:22px}.sub,.hint,.meta{color:var(--muted);font-size:12px;line-height:1.4}.card{background:rgba(255,250,244,.96);border:1px solid var(--line);border-radius:18px;padding:11px;box-shadow:var(--shadow);margin-bottom:10px}
+.now{text-align:center}.status{font-size:13px;color:var(--muted)}.timer{font-variant-numeric:tabular-nums;font-size:35px;font-weight:850;letter-spacing:.03em;margin:3px 0 7px}
+.picker-title{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:8px 0 5px}.picker-title b{font-size:13px}.picker-title .row{justify-content:flex-end;gap:5px}
+.chips{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 5px;padding:4px 0 7px;overflow:visible}
+.chip{min-width:0;width:100%;border:0;background:transparent;padding:0;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px}
+.color-disc{width:39px;height:39px;border-radius:10px;border:3px solid transparent;box-shadow:0 3px 8px rgba(0,0,0,.13)}
+.chip.sub .color-disc{width:35px;height:35px;border-radius:9px}
+.chip.selected .color-disc{border-color:#2c2520;box-shadow:0 0 0 2px white,0 4px 10px rgba(0,0,0,.2);transform:scale(1.04)}
+.chip-label{width:100%;font-size:10px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
-.bigbtn{width:100%;border:0;border-radius:22px;padding:18px 16px;font-size:24px;font-weight:900;color:white;box-shadow:0 10px 20px rgba(50,38,28,.18);margin-top:10px;text-shadow:0 1px 2px rgba(0,0,0,.25)}.bigbtn:active{transform:scale(.99)}
-.selection-preview{display:flex;align-items:center;gap:10px;margin:6px 0 4px;padding:10px 12px;border-radius:14px;background:white;border:1px solid var(--line);text-align:left}
+.bigbtn{width:100%;border:0;border-radius:17px;padding:14px 12px;font-size:22px;font-weight:900;color:white;box-shadow:0 8px 16px rgba(50,38,28,.18);margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,.25)}.bigbtn:active{transform:scale(.99)}
+.selection-preview{display:flex;align-items:center;gap:8px;margin:3px 0;padding:7px 9px;border-radius:12px;background:white;border:1px solid var(--line);text-align:left}
 .preview-main{width:18px;height:42px;border-radius:7px}
 .preview-sub{width:8px;height:42px;border-radius:5px}
 .preview-text{font-weight:850}.preview-subtext{font-size:13px;color:var(--muted);margin-top:2px}
-.smallbtn{border:1px solid var(--line);background:white;border-radius:13px;padding:9px 11px;color:var(--text);font-weight:750}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
+.smallbtn{border:1px solid var(--line);background:white;border-radius:11px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:750}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
 label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,select{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:13px;padding:12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{display:flex;min-height:40px;border-radius:13px;overflow:hidden;background:#eee2d7;border:1px solid var(--line)}.seg{min-width:5px;display:flex;align-items:center;justify-content:center;padding:0 3px;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden}
 .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px}.filter{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:white;padding:7px 10px}.filter.active{outline:2px solid #2c2520}
@@ -32,11 +33,21 @@ label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,se
 dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .profile-list{display:grid;gap:8px}.profile-row{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center}.profile-row input[type=color]{height:44px;padding:3px}
 .install{padding:11px;border-radius:14px;background:#fff;border:1px dashed var(--line);margin-top:12px;text-align:left}
+
+@media (max-width:390px){
+  .chips{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px 3px}
+  .color-disc{width:36px;height:36px}
+  .chip.sub .color-disc{width:33px;height:33px}
+  .picker-title b{font-size:12px}
+  .picker-title .smallbtn{padding:6px 7px;font-size:11px}
+  header .sub{display:none}
+}
+
 </style>
 </head>
 <body>
 <div class="app">
-<header><h1>時間の塊</h1><div class="sub">名前なしの12色に加えて、メインもサブも好きな色を何個でも追加できます。最近使ったメイン色ほど上に並びます。</div></header>
+<header><h1>時間の塊</h1><div class="sub">色は横にスワイプせず一覧で選べます。メインもサブも追加でき、最近使ったメイン色ほど上に並びます。</div></header>
 
 <section class="card now">
   <div class="status" id="status">メイン色を選んでスタート</div>
@@ -70,7 +81,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
     <div class="row" style="margin-top:9px"><button class="smallbtn" id="saveMemoBtn">保存</button><button class="smallbtn" id="skipMemoBtn">未入力で保存</button></div>
   </div>
 
-  <div class="install"><b>ホーム画面から開く</b><div class="hint">iPhoneのSafariで共有ボタン →「ホーム画面に追加」。これはアイコンから1タップで開く方法です。本物のウィジェットは別途ネイティブアプリ化が必要です。</div></div>
+  <details class="install"><summary><b>ホーム画面への置き方</b></summary><div class="hint">iPhoneのSafariで共有ボタン →「ホーム画面に追加」。</div></details>
 </section>
 
 <section class="card">
@@ -159,7 +170,13 @@ let selectedMain=profiles.main[0]?.id||"", selectedSub="", pendingId=null, editI
 const pad=n=>String(n).padStart(2,"0");
 const todayKey=(ts=Date.now())=>{let d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
 const fmtTime=ts=>{let d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
-const fmtDur=ms=>{let s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}時間${m}分`:`${m}分`};
+const fmtDur=ms=>{
+ let s=Math.max(0,Math.floor(ms/1000));
+ let h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+ if(h)return `${h}時間${m}分${sec}秒`;
+ if(m)return `${m}分${sec}秒`;
+ return `${sec}秒`;
+};
 const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
 const toLocal=ts=>{let d=new Date(ts-d.getTimezoneOffset()*60000);return d.toISOString().slice(0,16)};
 const fromLocal=v=>new Date(v).getTime();

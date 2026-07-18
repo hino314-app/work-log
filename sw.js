@@ -1,4 +1,4 @@
-const CACHE="time-block-v8";
+const CACHE="time-block-v9";
 const ASSETS=["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
 
 self.addEventListener("install",event=>{
