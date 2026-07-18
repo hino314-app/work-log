@@ -1,6 +1,6 @@
 {
-  "name": "作業ログ",
-  "short_name": "作業ログ",
+  "name": "時間の塊",
+  "short_name": "時間の塊",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f5f1eb",

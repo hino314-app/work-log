@@ -47,7 +47,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </head>
 <body>
 <div class="app">
-<header><h1>時間の塊</h1><div class="sub">色は横にスワイプせず一覧で選べます。メインもサブも追加でき、最近使ったメイン色ほど上に並びます。</div></header>
+<header><h1>時間の塊</h1><div class="sub">色は一覧からワンタップ。サブは選択中の色をもう一度押すと解除できます。</div></header>
 
 <section class="card now">
   <div class="status" id="status">メイン色を選んでスタート</div>
@@ -57,11 +57,8 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
   <div class="chips" id="mainPicker"></div>
 
   <div class="picker-title">
-  <b>サブ色（開始後でも選べます）</b>
-  <div class="row">
-    <button class="smallbtn" onclick="openProfiles('sub')">＋ 色を追加・編集</button>
-    <button class="smallbtn" onclick="clearSub()">選択解除</button>
-  </div>
+  <b>サブ色（同じ色をもう一度押すと解除）</b>
+  <button class="smallbtn" onclick="openProfiles('sub')">＋ 色を追加・編集</button>
 </div>
   <div class="chips" id="subPicker"></div>
 
@@ -88,7 +85,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
   <div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div>
   <div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div>
   <div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div>
-  <p class="hint">バー内に開始時刻と長さを表示。短い記録は幅が狭いため、タップすると詳細が見られます。</p>
+  <p class="hint">バーの長さは実際の作業時間に比例します。短い記録もタップすると編集できます。</p>
 </section>
 
 <section class="card">
@@ -178,7 +175,11 @@ const fmtDur=ms=>{
  return `${sec}秒`;
 };
 const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
-const toLocal=ts=>{let d=new Date(ts-d.getTimezoneOffset()*60000);return d.toISOString().slice(0,16)};
+const toLocal=ts=>{
+ const original=new Date(ts);
+ const local=new Date(ts-original.getTimezoneOffset()*60000);
+ return local.toISOString().slice(0,16);
+};
 const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id,log)=>profiles[kind].find(p=>p.id===id)||(id&&id.startsWith("legacy_")?{id,name:"旧データ",color:log?.legacyColor||"#888"}:null);
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
@@ -206,7 +207,8 @@ function renderPickers(){
  $("subPicker").innerHTML=profiles.sub.map(p=>chipHTML(p,selectedSub,"sub")).join("");
  [...$("mainPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedMain=b.dataset.id;renderAll()}});
  [...$("subPicker").children].forEach(b=>b.onclick=()=>{
-   selectedSub=b.dataset.id;
+   const tapped=b.dataset.id;
+   selectedSub=selectedSub===tapped?"":tapped;
    if(running){
      running.subId=selectedSub;
      save();
@@ -225,10 +227,22 @@ function clearSub(){
 function todayLogs(){return logs.filter(l=>todayKey(l.start)===todayKey()).sort((a,b)=>a.start-b.start)}
 function visibleLogs(){return todayLogs().filter(l=>(filterMain==="all"||l.mainId===filterMain)&&(filterSub==="all"||l.subId===filterSub))}
 function renderTimeline(kind){
- let list=visibleLogs(), box=$(kind+"Timeline"), total=list.reduce((s,l)=>s+(l.end-l.start),0)||1;
+ let list=visibleLogs();
+ if(kind==="sub") list=list.filter(l=>l.subId);
+ const box=$(kind+"Timeline");
+ const total=list.reduce((sum,l)=>sum+Math.max(0,l.end-l.start),0);
  $(kind+"Total").textContent=list.length?fmtDur(total):"";
- if(!list.length){box.innerHTML='<div class="empty" style="width:100%">記録なし</div>';return}
- box.innerHTML=list.map(l=>{let p=getP(kind,l[kind+"Id"],l),w=Math.max(3,(l.end-l.start)/total*100),label=`${fmtTime(l.start)} ${fmtDur(l.end-l.start)}`;return `<div class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'未選択')} ${label}" style="width:${w}%;background:${p?.color||'#d8d0c8'}">${w>13?label:""}</div>`}).join("")
+ if(!list.length||total<=0){
+   box.innerHTML='<div class="empty" style="width:100%">記録なし</div>';
+   return;
+ }
+ box.innerHTML=list.map(l=>{
+   const p=getP(kind,l[kind+"Id"],l);
+   const duration=Math.max(0,l.end-l.start);
+   const ratio=duration/total;
+   const label=`${fmtTime(l.start)} ${fmtDur(duration)}`;
+   return `<div class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'名前なし')} ${label}" style="flex:${duration} 1 0;background:${p?.color||'#d8d0c8'}">${ratio>=0.13?label:""}</div>`;
+ }).join("");
 }
 function renderFilters(){
  $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
