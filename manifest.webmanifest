@@ -1,11 +1,10 @@
 {
-  "name": "作業記録",
-  "short_name": "作業記録",
-  "start_url": "./index.html",
+  "name": "時間の塊",
+  "short_name": "時間の塊",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f7f3ee",
   "theme_color": "#f7f3ee",
-  "description": "色で時間の塊を残して、あとから作業内容を記録するアプリ",
   "icons": [
     {
       "src": "./icon-192.png",

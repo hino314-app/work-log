@@ -2,64 +2,157 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>作業記録</title>
-<link rel="manifest" href="./manifest.webmanifest">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f3ee">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="作業記録">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-192.png">
+<title>時間の塊</title>
 <style>
-:root{--card:#fffaf4;--text:#2c2520;--muted:#7b6d62;--line:#eadfd3;--accent:#4b3f36;--danger:#b94b4b;--shadow:0 10px 30px rgba(67,48,32,.10)}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:linear-gradient(180deg,#fbf7f2 0%,#f1e8df 100%);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
-.app{max-width:720px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(70px + env(safe-area-inset-bottom))}
-header{padding:10px 4px 18px}h1{margin:0;font-size:26px}.sub{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.6}
-.card{background:rgba(255,250,244,.94);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
-.now{text-align:center}.status{font-size:14px;color:var(--muted);margin-bottom:8px}.timer{font-variant-numeric:tabular-nums;font-size:42px;font-weight:800;letter-spacing:.04em;margin:6px 0 12px}
-button{font-family:inherit;cursor:pointer}.bigbtn{width:100%;border:0;border-radius:22px;padding:18px 16px;font-size:24px;font-weight:800;color:white;background:var(--accent);box-shadow:0 12px 22px rgba(50,38,28,.22)}.bigbtn.stop{background:var(--danger)}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.colors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0 14px}.color{height:44px;border-radius:14px;border:3px solid transparent;cursor:pointer}.color.selected{border-color:#2b211a;transform:scale(1.04)}
-input{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:14px;padding:13px 12px;font-size:16px}label{display:block;color:var(--muted);font-size:13px;margin:10px 0 6px}
-.smallbtn{border:1px solid var(--line);background:white;border-radius:13px;padding:10px 12px;color:var(--text);font-weight:700}.smallbtn.danger{color:var(--danger)}
-.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}h2{margin:0;font-size:18px}
-.timeline{display:flex;height:34px;border-radius:14px;overflow:hidden;background:#eee2d7;border:1px solid var(--line)}.seg{min-width:4px}.empty{color:var(--muted);text-align:center;padding:22px 8px}
-.log{border-top:1px solid var(--line);padding:12px 0}.log:first-child{border-top:0}.log-main{display:flex;gap:10px;align-items:flex-start}.swatch{width:18px;height:18px;border-radius:6px;flex:0 0 auto;margin-top:3px}.log-title{font-weight:800;margin-bottom:3px}.meta{color:var(--muted);font-size:13px;line-height:1.55}.actions{margin-top:9px;display:flex;gap:8px;flex-wrap:wrap}
-.summary-line{display:flex;align-items:center;gap:8px;margin:9px 0}.bar-wrap{flex:1;height:12px;border-radius:999px;background:#eee2d7;overflow:hidden}.bar{height:100%;border-radius:999px}
-dialog{border:0;border-radius:22px;padding:0;width:min(92vw,520px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-.hint,.install{font-size:13px;color:var(--muted);line-height:1.6}.install{display:none;margin-top:10px;background:#fff;border:1px dashed #cdbdad;border-radius:16px;padding:12px;text-align:left}
+:root{--bg:#f7f3ee;--card:#fffaf4;--text:#2c2520;--muted:#7b6d62;--line:#eadfd3;--danger:#b94b4b;--shadow:0 10px 30px rgba(67,48,32,.10)}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:linear-gradient(180deg,#fbf7f2,#f1e8df);color:var(--text);min-height:100vh}
+button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:18px 14px 70px}header{padding:8px 4px 16px}h1{margin:0;font-size:27px}.sub,.hint,.meta{color:var(--muted);font-size:13px;line-height:1.55}.card{background:rgba(255,250,244,.96);border:1px solid var(--line);border-radius:22px;padding:17px;box-shadow:var(--shadow);margin-bottom:14px}
+.now{text-align:center}.status{font-size:14px;color:var(--muted)}.timer{font-variant-numeric:tabular-nums;font-size:42px;font-weight:850;letter-spacing:.04em;margin:7px 0 14px}
+.picker-title{display:flex;justify-content:space-between;align-items:center;margin:12px 0 7px}.picker-title b{font-size:14px}.chips{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 8px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:2px solid transparent;border-radius:999px;background:white;padding:9px 13px;font-weight:750;box-shadow:0 2px 8px rgba(0,0,0,.05)}.chip.selected{border-color:#2c2520;transform:translateY(-1px)}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+.bigbtn{width:100%;border:3px solid currentColor;border-radius:22px;padding:17px 16px;font-size:24px;font-weight:900;background:white;box-shadow:0 10px 20px rgba(50,38,28,.12);margin-top:9px}.bigbtn:active{transform:scale(.99)}
+.smallbtn{border:1px solid var(--line);background:white;border-radius:13px;padding:9px 11px;color:var(--text);font-weight:750}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
+label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,select{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:13px;padding:12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{display:flex;min-height:40px;border-radius:13px;overflow:hidden;background:#eee2d7;border:1px solid var(--line)}.seg{min-width:5px;display:flex;align-items:center;justify-content:center;padding:0 3px;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden}
+.filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px}.filter{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:white;padding:7px 10px}.filter.active{outline:2px solid #2c2520}
+.log{border-top:1px solid var(--line);padding:12px 0}.log:first-child{border-top:0}.log-main{display:flex;gap:10px}.swatches{display:flex;gap:3px;padding-top:3px}.swatch{width:15px;height:21px;border-radius:5px}.log-title{font-weight:850}.actions{display:flex;gap:7px;margin-top:8px}.empty{text-align:center;color:var(--muted);padding:20px 6px}
+dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.profile-list{display:grid;gap:8px}.profile-row{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center}.profile-row input[type=color]{height:44px;padding:3px}
+.install{padding:11px;border-radius:14px;background:#fff;border:1px dashed var(--line);margin-top:12px;text-align:left}
 </style>
 </head>
 <body>
 <div class="app">
-<header><h1>作業記録</h1><div class="sub">色で時間の塊を残して、あとから思い出すための記録アプリです。</div><div class="install" id="installHint">iPhoneではSafariで開いて、共有ボタンから「ホーム画面に追加」を選ぶとアプリみたいに使えます。</div></header>
-<section class="card now"><div class="status" id="status">色を選んでスタート</div><div class="timer" id="timer">00:00:00</div><div class="colors" id="colorPicker"></div><button class="bigbtn" id="mainBtn">▶ スタート</button><div id="afterStop" style="display:none;text-align:left;margin-top:14px;"><label>今の時間、何してた？ 後で空欄でもOK</label><input id="taskInput" placeholder="例：漫画、仕事、SNS、休憩"><div class="row" style="margin-top:10px;"><button class="smallbtn" id="saveTaskBtn">保存</button><button class="smallbtn" id="skipTaskBtn">未入力で保存</button></div></div></section>
-<section class="card"><div class="section-title"><h2>今日の時間ブロック</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div><div class="timeline" id="timeline"></div><p class="hint">色の塊を見て「あ、この時間あれやってたな」を思い出す用です。</p></section>
-<section class="card"><div class="section-title"><h2>タスク別 合計</h2></div><div id="summary"></div></section>
+<header><h1>時間の塊</h1><div class="sub">先に細かく決めなくてOK。メインとサブを選び、まず押して始める。</div></header>
+
+<section class="card now">
+  <div class="status" id="status">メインを選んでスタート</div>
+  <div class="timer" id="timer">00:00:00</div>
+
+  <div class="picker-title"><b>メイン</b><button class="smallbtn" onclick="openProfiles('main')">色・名前を編集</button></div>
+  <div class="chips" id="mainPicker"></div>
+
+  <div class="picker-title"><b>サブ（任意）</b><button class="smallbtn" onclick="clearSub()">選択解除</button></div>
+  <div class="chips" id="subPicker"></div>
+
+  <button class="bigbtn" id="mainBtn">▶ スタート</button>
+
+  <div id="afterStop" style="display:none;text-align:left;margin-top:14px">
+    <label>あとから内訳を書く（空欄でもOK）</label>
+    <input id="memoInput" placeholder="例：映画、コメント、Twitterの文章">
+    <div class="row" style="margin-top:9px"><button class="smallbtn" id="saveMemoBtn">保存</button><button class="smallbtn" id="skipMemoBtn">未入力で保存</button></div>
+  </div>
+
+  <div class="install"><b>ホーム画面から開く</b><div class="hint">iPhoneのSafariで共有ボタン →「ホーム画面に追加」。これはアイコンから1タップで開く方法です。本物のウィジェットは別途ネイティブアプリ化が必要です。</div></div>
+</section>
+
+<section class="card">
+  <div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div>
+  <div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div>
+  <div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div>
+  <p class="hint">バー内に開始時刻と長さを表示。短い記録は幅が狭いため、タップすると詳細が見られます。</p>
+</section>
+
+<section class="card">
+  <div class="section-title"><h2>絞り込み</h2><button class="smallbtn" onclick="setFilter('all','all')">すべて表示</button></div>
+  <div class="picker-title"><b>メイン別</b></div><div class="filters" id="mainFilters"></div>
+  <div class="picker-title"><b>サブ別</b></div><div class="filters" id="subFilters"></div>
+</section>
+
 <section class="card"><div class="section-title"><h2>今日の履歴</h2></div><div id="logs"></div></section>
 </div>
-<dialog id="editDialog"><div class="dialog-inner"><h2>記録を編集</h2><label>何してた？</label><input id="editTask"><label>色</label><div class="colors" id="editColors"></div><div class="dialog-actions"><button class="smallbtn" id="cancelEdit">閉じる</button><button class="smallbtn" id="saveEdit">保存</button></div></div></dialog>
+
+<dialog id="editDialog"><div class="dialog-inner">
+<h2>記録を編集</h2>
+<label>内訳・メモ</label><input id="editMemo">
+<label>開始</label><input id="editStart" type="datetime-local">
+<label>終了</label><input id="editEnd" type="datetime-local">
+<label>メイン</label><select id="editMain"></select>
+<label>サブ</label><select id="editSub"></select>
+<div class="dialog-actions"><button class="smallbtn" onclick="editDialog.close()">閉じる</button><button class="smallbtn" id="saveEdit">保存</button></div>
+</div></dialog>
+
+<dialog id="profilesDialog"><div class="dialog-inner">
+<h2 id="profilesTitle">色・名前を編集</h2>
+<div class="profile-list" id="profileList"></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" id="addProfile">＋ 追加</button></div>
+<div class="dialog-actions"><button class="smallbtn" onclick="profilesDialog.close()">閉じる</button><button class="smallbtn" id="saveProfiles">保存</button></div>
+</div></dialog>
+
 <script>
-if("serviceWorker"in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}
-const colors=["#4F8EF7","#54B689","#F2C94C","#EB5757","#9B51E0","#F2994A","#56CCF2","#6FCF97","#BB6BD9","#2D9CDB","#8D6E63","#333333"];
-const STORAGE="simple_work_timer_logs_v2";let logs=JSON.parse(localStorage.getItem(STORAGE)||"[]");let running=JSON.parse(localStorage.getItem("running_timer_v2")||"null");let selectedColor=colors[0],pendingLogId=null,editId=null,editColor=colors[0];const $=id=>document.getElementById(id);
-const isStandalone=window.navigator.standalone||window.matchMedia("(display-mode: standalone)").matches;if(!isStandalone)$("installHint").style.display="block";
-function pad(n){return String(n).padStart(2,"0")}function fmtTime(ts){const d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`}function fmtDuration(ms){const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;if(h)return `${h}時間${m}分`;if(m)return `${m}分${sec}秒`;return `${sec}秒`}function fmtTimer(ms){const s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`}function todayKey(ts=Date.now()){const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}function save(){localStorage.setItem(STORAGE,JSON.stringify(logs))}function saveRunning(){running?localStorage.setItem("running_timer_v2",JSON.stringify(running)):localStorage.removeItem("running_timer_v2")}
-function renderColorPicker(){$("colorPicker").innerHTML=colors.map(c=>`<button class="color ${c===selectedColor?'selected':''}" style="background:${c}" data-color="${c}"></button>`).join("");$("colorPicker").querySelectorAll(".color").forEach(btn=>btn.onclick=()=>{selectedColor=btn.dataset.color;renderColorPicker()})}
-function renderEditColors(){$("editColors").innerHTML=colors.map(c=>`<button class="color ${c===editColor?'selected':''}" style="background:${c}" data-color="${c}"></button>`).join("");$("editColors").querySelectorAll(".color").forEach(btn=>btn.onclick=()=>{editColor=btn.dataset.color;renderEditColors()})}
-function todayLogs(){return logs.filter(l=>todayKey(l.start)===todayKey()).sort((a,b)=>b.start-a.start)}
-function renderTimeline(){const list=todayLogs().slice().reverse(),box=$("timeline");if(!list.length){box.innerHTML=`<div class="empty" style="width:100%;">まだ記録なし</div>`;return}const total=list.reduce((sum,l)=>sum+(l.end-l.start),0)||1;box.innerHTML=list.map(l=>`<div class="seg" style="width:${Math.max(2,(l.end-l.start)/total*100)}%;background:${l.color}"></div>`).join("")}
-function renderSummary(){const list=todayLogs(),summary={};list.forEach(l=>{const name=l.task||"未入力";summary[name]=(summary[name]||0)+(l.end-l.start)});const entries=Object.entries(summary).sort((a,b)=>b[1]-a[1]),total=entries.reduce((s,e)=>s+e[1],0)||1;if(!entries.length){$("summary").innerHTML=`<div class="empty">まだ集計なし</div>`;return}$("summary").innerHTML=entries.map(([name,ms])=>{const sample=list.find(l=>(l.task||"未入力")===name),pct=ms/total*100;return `<div class="summary-line"><span class="swatch" style="background:${sample.color}"></span><div style="width:92px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</div><div class="bar-wrap"><div class="bar" style="width:${pct}%;background:${sample.color}"></div></div><div class="meta" style="width:72px;text-align:right;">${fmtDuration(ms)}</div></div>`}).join("")}
-function renderLogs(){const list=todayLogs();if(!list.length){$("logs").innerHTML=`<div class="empty">まだ履歴なし</div>`;return}$("logs").innerHTML=list.map(l=>`<div class="log"><div class="log-main"><span class="swatch" style="background:${l.color}"></span><div style="flex:1;"><div class="log-title">${escapeHtml(l.task||"未入力")}</div><div class="meta">${fmtTime(l.start)}〜${fmtTime(l.end)} / ${fmtDuration(l.end-l.start)}</div><div class="actions"><button class="smallbtn" onclick="openEdit('${l.id}')">編集</button><button class="smallbtn danger" onclick="deleteLog('${l.id}')">削除</button></div></div></div></div>`).join("")}
-function renderAll(){renderColorPicker();renderTimeline();renderSummary();renderLogs();updateRunningView()}function updateRunningView(){if(running){$("status").textContent=`計測中：${fmtTime(running.start)}開始`;$("timer").textContent=fmtTimer(Date.now()-running.start);$("mainBtn").textContent="■ ストップ";$("mainBtn").classList.add("stop");$("colorPicker").style.opacity=.5}else{$("status").textContent="色を選んでスタート";$("timer").textContent="00:00:00";$("mainBtn").textContent="▶ スタート";$("mainBtn").classList.remove("stop");$("colorPicker").style.opacity=1}}
-function startTimer(){running={start:Date.now(),color:selectedColor};saveRunning();$("afterStop").style.display="none";updateRunningView()}function stopTimer(){const now=Date.now(),log={id:String(now),start:running.start,end:now,color:running.color,task:""};logs.push(log);save();running=null;saveRunning();pendingLogId=log.id;$("taskInput").value="";$("afterStop").style.display="block";renderAll()}
-$("mainBtn").onclick=()=>running?stopTimer():startTimer();$("saveTaskBtn").onclick=()=>{const l=logs.find(x=>x.id===pendingLogId);if(l)l.task=$("taskInput").value.trim();pendingLogId=null;$("afterStop").style.display="none";save();renderAll()};$("skipTaskBtn").onclick=()=>{pendingLogId=null;$("afterStop").style.display="none";renderAll()};
-$("clearBtn").onclick=()=>{if(confirm("今日の記録を全部削除しますか？")){const key=todayKey();logs=logs.filter(l=>todayKey(l.start)!==key);save();renderAll()}};
-window.openEdit=function(id){const l=logs.find(x=>x.id===id);if(!l)return;editId=id;editColor=l.color;$("editTask").value=l.task||"";renderEditColors();$("editDialog").showModal()}
-window.deleteLog=function(id){if(confirm("この記録を削除しますか？")){logs=logs.filter(l=>l.id!==id);save();renderAll()}}
-$("cancelEdit").onclick=()=>$("editDialog").close();$("saveEdit").onclick=()=>{const l=logs.find(x=>x.id===editId);if(l){l.task=$("editTask").value.trim();l.color=editColor;save()}$("editDialog").close();renderAll()};
-function escapeHtml(str){return String(str).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[s]))}
-setInterval(updateRunningView,1000);renderAll();
+const $=id=>document.getElementById(id);
+const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2";
+const defaultProfiles={
+ main:[{id:"blue",name:"青木さん",color:"#3777c8"},{id:"green",name:"漫画",color:"#3f9863"},{id:"orange",name:"仕事",color:"#d88738"},{id:"pink",name:"生活",color:"#c85e89"}],
+ sub:[{id:"twitter",name:"Twitter",color:"#4f9be8"},{id:"movie",name:"映画",color:"#7459b8"},{id:"comment",name:"コメント",color:"#d05a79"},{id:"sleep",name:"寝起き",color:"#7893a8"}]
+};
+let profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")||defaultProfiles;
+let logs=JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
+let oldLogs=JSON.parse(localStorage.getItem("work_logs_v1")||"[]");
+if(!logs.length && oldLogs.length){logs=oldLogs.map(x=>({id:x.id,start:x.start,end:x.end,mainId:"legacy_"+x.color,subId:"",memo:x.task||"",legacyColor:x.color}));localStorage.setItem(LOG_KEY,JSON.stringify(logs))}
+let running=JSON.parse(localStorage.getItem(RUN_KEY)||"null");
+let selectedMain=profiles.main[0]?.id||"", selectedSub="", pendingId=null, editId=null, profileMode="main", filterMain="all", filterSub="all";
+const pad=n=>String(n).padStart(2,"0");
+const todayKey=(ts=Date.now())=>{let d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const fmtTime=ts=>{let d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fmtDur=ms=>{let s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}時間${m}分`:`${m}分`};
+const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
+const toLocal=ts=>{let d=new Date(ts-d.getTimezoneOffset()*60000);return d.toISOString().slice(0,16)};
+const fromLocal=v=>new Date(v).getTime();
+const getP=(kind,id,log)=>profiles[kind].find(p=>p.id===id)||(id&&id.startsWith("legacy_")?{id,name:"旧データ",color:log?.legacyColor||"#888"}:null);
+function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
+function chipHTML(p,selected){return `<button class="chip ${p.id===selected?'selected':''}" data-id="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`}
+function renderPickers(){
+ $("mainPicker").innerHTML=profiles.main.map(p=>chipHTML(p,selectedMain)).join("");
+ $("subPicker").innerHTML=profiles.sub.map(p=>chipHTML(p,selectedSub)).join("");
+ [...$("mainPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedMain=b.dataset.id;renderAll()}});
+ [...$("subPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedSub=b.dataset.id;renderAll()}});
+}
+function clearSub(){if(!running){selectedSub="";renderAll()}}
+function todayLogs(){return logs.filter(l=>todayKey(l.start)===todayKey()).sort((a,b)=>a.start-b.start)}
+function visibleLogs(){return todayLogs().filter(l=>(filterMain==="all"||l.mainId===filterMain)&&(filterSub==="all"||l.subId===filterSub))}
+function renderTimeline(kind){
+ let list=visibleLogs(), box=$(kind+"Timeline"), total=list.reduce((s,l)=>s+(l.end-l.start),0)||1;
+ $(kind+"Total").textContent=list.length?fmtDur(total):"";
+ if(!list.length){box.innerHTML='<div class="empty" style="width:100%">記録なし</div>';return}
+ box.innerHTML=list.map(l=>{let p=getP(kind,l[kind+"Id"],l),w=Math.max(3,(l.end-l.start)/total*100),label=`${fmtTime(l.start)} ${fmtDur(l.end-l.start)}`;return `<div class="seg" onclick="openEdit('${l.id}')" title="${esc(p?.name||'未選択')} ${label}" style="width:${w}%;background:${p?.color||'#d8d0c8'}">${w>13?label:""}</div>`}).join("")
+}
+function renderFilters(){
+ $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join("");
+ $("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join("")
+}
+function setFilter(m,s){if(m!==null)filterMain=m;if(s!==null)filterSub=s;renderAll()}
+function renderLogs(){
+ let list=visibleLogs().slice().reverse(); if(!list.length){$("logs").innerHTML='<div class="empty">まだ履歴なし</div>';return}
+ $("logs").innerHTML=list.map(l=>{let m=getP("main",l.mainId,l),s=getP("sub",l.subId,l);return `<div class="log"><div class="log-main"><div class="swatches"><span class="swatch" style="background:${m?.color||'#ccc'}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div><div style="flex:1"><div class="log-title">${esc(m?.name||"未選択")}${s?` ／ ${esc(s.name)}`:""}</div><div class="meta">${esc(l.memo||"内訳なし")}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}</div><div class="actions"><button class="smallbtn" onclick="openEdit('${l.id}')">編集</button><button class="smallbtn danger" onclick="deleteLog('${l.id}')">削除</button></div></div></div></div>`}).join("")
+}
+function updateRunning(){
+ let p=getP("main",running?.mainId||selectedMain,running);
+ if(running){$("status").textContent=`計測中：${p?.name||"未選択"}　${fmtTime(running.start)}開始`;$("timer").textContent=fmtTimer(Date.now()-running.start);$("mainBtn").textContent="■ ストップ";$("mainBtn").style.color=p?.color||"#333"}
+ else{$("status").textContent="メインを選んでスタート";$("timer").textContent="00:00:00";$("mainBtn").textContent="▶ スタート";$("mainBtn").style.color=p?.color||"#333"}
+}
+function startTimer(){if(!selectedMain)return;running={start:Date.now(),mainId:selectedMain,subId:selectedSub};$("afterStop").style.display="none";save();renderAll()}
+function stopTimer(){let now=Date.now(),l={id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""};logs.push(l);running=null;pendingId=l.id;$("memoInput").value="";$("afterStop").style.display="block";save();renderAll()}
+$("mainBtn").onclick=()=>running?stopTimer():startTimer();
+$("saveMemoBtn").onclick=()=>{let l=logs.find(x=>x.id===pendingId);if(l)l.memo=$("memoInput").value.trim();pendingId=null;$("afterStop").style.display="none";save();renderAll()};
+$("skipMemoBtn").onclick=()=>{pendingId=null;$("afterStop").style.display="none";renderAll()};
+function openEdit(id){let l=logs.find(x=>x.id===id);if(!l)return;editId=id;$("editMemo").value=l.memo||"";$("editStart").value=toLocal(l.start);$("editEnd").value=toLocal(l.end);$("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name)}</option>`).join("");$("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name)}</option>`).join("");editDialog.showModal()}
+$("saveEdit").onclick=()=>{let l=logs.find(x=>x.id===editId),st=fromLocal($("editStart").value),en=fromLocal($("editEnd").value);if(!l||!st||!en||en<=st){alert("終了は開始より後にしてください");return}Object.assign(l,{memo:$("editMemo").value.trim(),start:st,end:en,mainId:$("editMain").value,subId:$("editSub").value});save();editDialog.close();renderAll()}
+function deleteLog(id){if(confirm("この記録を削除しますか？")){logs=logs.filter(x=>x.id!==id);save();renderAll()}}
+$("clearBtn").onclick=()=>{if(confirm("今日の記録を全部削除しますか？")){logs=logs.filter(l=>todayKey(l.start)!==todayKey());save();renderAll()}}
+function openProfiles(mode){profileMode=mode;$("profilesTitle").textContent=(mode==="main"?"メイン":"サブ")+"の色・名前を編集";renderProfileRows();profilesDialog.showModal()}
+function renderProfileRows(){ $("profileList").innerHTML=profiles[profileMode].map((p,i)=>`<div class="profile-row"><input type="color" value="${p.color}" data-i="${i}" data-k="color"><input value="${escAttr(p.name)}" data-i="${i}" data-k="name"><button class="smallbtn danger" onclick="removeProfile(${i})">削除</button></div>`).join("")}
+function removeProfile(i){if(profiles[profileMode].length<=1){alert("最低1つは残してください");return}profiles[profileMode].splice(i,1);renderProfileRows()}
+$("addProfile").onclick=()=>{profiles[profileMode].push({id:crypto.randomUUID?.()||String(Date.now()),name:"新しい項目",color:"#888888"});renderProfileRows()}
+$("saveProfiles").onclick=()=>{document.querySelectorAll("#profileList input").forEach(el=>profiles[profileMode][+el.dataset.i][el.dataset.k]=el.value.trim()||"名称なし");if(!profiles.main.some(p=>p.id===selectedMain))selectedMain=profiles.main[0]?.id||"";if(!profiles.sub.some(p=>p.id===selectedSub))selectedSub="";save();profilesDialog.close();renderAll()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function escAttr(s){return esc(s)}
+function renderAll(){renderPickers();renderFilters();renderTimeline("main");renderTimeline("sub");renderLogs();updateRunning()}
+setInterval(updateRunning,1000);renderAll();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");
 </script>
-</body>
-</html>
+</body></html>
