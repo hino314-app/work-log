@@ -44,7 +44,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 }
 
 .timeline-scale{display:flex;justify-content:space-between;margin:2px 1px 0;color:var(--muted);font-size:10px}
-.day-start-setting{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px;margin:4px 0 12px;padding:9px 11px;border-radius:13px;background:#f5ece4}.day-start-setting>span{font-size:12px;font-weight:850}.day-start-setting small{grid-column:1/-1;text-align:right;color:var(--muted);font-size:10px}.swipe-hour{min-width:74px;padding:8px 14px;border:1px solid var(--line);border-radius:12px;background:white;font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;touch-action:none;user-select:none;cursor:ew-resize}
+.timeline-scale{padding:10px 2px 8px;touch-action:none;user-select:none;cursor:ew-resize}
 .running-editor{text-align:left;margin-top:10px}.running-editor input{margin-top:5px}.running-editor label{margin-top:0}
 </style>
 </head>
@@ -91,8 +91,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 
 <section class="card">
   <div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div>
-  <div class="day-start-setting"><span>一日の始まり</span><div class="swipe-hour" id="dayStartHour" aria-label="一日の開始時刻。左右にスワイプして変更">8時</div><small>数字を指で左右に動かして変更</small></div>
-  <div class="timeline-scale" id="timelineScale"></div>
+  <div class="timeline-scale" id="timelineScale" aria-label="一日の開始時刻。時間の数字を左右にスワイプして変更"></div>
   <div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div>
   <div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div>
   <p class="hint">横幅全体が今日の24時間です。何も記録していない時間は空欄になります。色の部分をタップすると編集できます。</p>
@@ -389,10 +388,10 @@ $("saveProfiles").onclick=()=>{
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function escAttr(s){return esc(s)}
 let swipeStart=null;
-$("dayStartHour").onpointerdown=e=>{swipeStart={x:e.clientX,hour:dayStartHour};e.currentTarget.setPointerCapture(e.pointerId)};
-$("dayStartHour").onpointermove=e=>{if(!swipeStart)return;let step=Math.round((e.clientX-swipeStart.x)/18),next=(swipeStart.hour+step+24)%24;if(next!==dayStartHour){dayStartHour=next;save();renderAll()}};
-$("dayStartHour").onpointerup=$("dayStartHour").onpointercancel=()=>swipeStart=null;
-function renderDayStart(){$("dayStartHour").textContent=dayStartHour+"時";$("timelineScale").innerHTML=[0,6,12,18,24].map(n=>`<span>${(dayStartHour+n)%24}時</span>`).join("")}
+$("timelineScale").onpointerdown=e=>{swipeStart={x:e.clientX,hour:dayStartHour};e.currentTarget.setPointerCapture(e.pointerId)};
+$("timelineScale").onpointermove=e=>{if(!swipeStart)return;let step=Math.round((e.clientX-swipeStart.x)/18),next=(swipeStart.hour+step+24)%24;if(next!==dayStartHour){dayStartHour=next;save();renderAll()}};
+$("timelineScale").onpointerup=$("timelineScale").onpointercancel=()=>swipeStart=null;
+function renderDayStart(){$("timelineScale").innerHTML=[0,6,12,18,24].map(n=>`<span>${(dayStartHour+n)%24}時</span>`).join("")}
 function renderAll(){renderPickers();renderFilters();renderDayStart();renderTimeline("main");renderTimeline("sub");renderLogs();updateRunning()}
 setInterval(()=>{updateRunning();if(running){renderTimeline("main");renderTimeline("sub")}},1000);renderAll();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");
