@@ -1,439 +1,50 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#3f78c5">
-<link rel="manifest" href="manifest.webmanifest">
-<title>時間の塊</title>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f3ee"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.png"><title>時間の塊</title>
 <style>
-:root{
-  --bg:#f5f1eb;--card:#fffdf9;--text:#2e2925;--muted:#80766d;
-  --line:#dfd6cd;--shadow:0 8px 24px rgba(63,49,40,.08)
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
-button,input,select{font:inherit}
-button{touch-action:manipulation}
-.app{max-width:720px;margin:auto;padding:10px 10px 80px}
-header{padding:8px 2px 4px}
-h1{font-size:22px;margin:0}
-.subtle{color:var(--muted);font-size:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px;margin-top:10px;box-shadow:var(--shadow)}
-.row{display:flex;gap:8px;align-items:center}
-.between{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.status{font-weight:800;font-size:14px}
-.timer{font-size:37px;font-weight:900;letter-spacing:.02em;margin:2px 0 6px}
-.now-clock{font-size:13px;color:var(--muted);font-weight:700}
-.label{font-size:13px;font-weight:850;margin:12px 0 7px}
-.main-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-.main-btn,.sub-btn{border:2px solid transparent;background:white;box-shadow:0 1px 5px rgba(50,40,35,.10);font-weight:850}
-.main-btn{border-radius:13px;min-height:54px;padding:5px;color:#2e2925}
-.main-btn.active,.sub-btn.active{outline:3px solid #2d2925;outline-offset:1px}
-.color-dot{width:24px;height:24px;border-radius:8px;margin:0 auto 3px}
-.main-name,.sub-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sub-wrap{overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
-.sub-grid{display:grid;grid-template-rows:repeat(2,44px);grid-auto-flow:column;grid-auto-columns:92px;gap:7px;width:max-content;min-width:100%}
-.sub-btn{border-radius:12px;padding:4px 7px;display:flex;align-items:center;justify-content:center;gap:5px}
-.sub-swatch{width:14px;height:26px;border-radius:5px;flex:none}
-.start-btn{width:100%;border:0;border-radius:15px;padding:15px;margin-top:8px;color:white;background:#4b4a48;font-size:18px;font-weight:900}
-.start-btn.stop{background:#4c4542}
-.memo-live{margin-top:10px}
-input[type=text]{width:100%;border:1px solid var(--line);border-radius:11px;background:white;padding:10px}
-.small{border:1px solid var(--line);background:white;border-radius:10px;padding:7px 9px;font-weight:750}
-.danger{color:#a13b38}
-.day-control{user-select:none;-webkit-user-select:none;touch-action:pan-y;text-align:center;padding:9px 0 4px}
-.day-time{display:inline-block;font-size:31px;font-weight:950;padding:8px 28px;border-radius:14px;background:#f2ece5;border:1px solid var(--line);cursor:ew-resize}
-.day-hint{font-size:11px;color:var(--muted);margin-top:5px}
-.timeline-head{display:flex;justify-content:space-between;align-items:end;margin:12px 1px 5px}
-.timeline{position:relative;height:56px;background:#f2ebe4;border:1px solid var(--line);border-radius:13px;overflow:hidden}
-.timeline::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 49.8%,rgba(90,75,65,.09) 50%,transparent 50.2%);pointer-events:none}
-.segment{position:absolute;top:0;height:100%;min-width:2px;border:0;padding:0 2px;color:white;font-size:10px;font-weight:850;overflow:hidden;white-space:nowrap;text-shadow:0 1px 2px #3338}
-.current-line{position:absolute;top:0;bottom:0;width:2px;background:#26221f;z-index:4;pointer-events:none}
-.current-line::before{content:"";position:absolute;top:-1px;left:-3px;width:8px;height:8px;border-radius:50%;background:#26221f}
-.edge-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin:3px 2px 0}
-.history-item{border-top:1px solid var(--line);padding:11px 0}
-.history-item:first-child{border-top:0}
-.history-top{display:flex;gap:9px;align-items:flex-start;cursor:pointer}
-.swatches{display:flex;gap:3px;padding-top:2px}
-.swatch{width:14px;height:28px;border-radius:5px}
-.hist-title{font-weight:900}
-.hist-meta{font-size:12px;color:var(--muted);margin-top:2px}
-.inline-editor{margin-top:10px;padding:10px;background:#f7f1eb;border-radius:13px;border:1px solid var(--line)}
-.inline-editor label{font-size:11px;font-weight:800;color:var(--muted);display:block;margin-top:7px}
-.inline-editor select,.inline-editor input[type=text]{width:100%;border:1px solid var(--line);border-radius:9px;background:white;padding:8px}
-.range-row{margin-top:8px}
-.range-row input[type=range]{width:100%;accent-color:#4a4a47}
-.range-times{display:flex;justify-content:space-between;font-weight:800;font-size:12px}
-.editor-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}
-.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.stat{background:#f5efe9;border-radius:12px;padding:9px}
-.stat b{display:block;font-size:13px}
-.stat span{font-size:12px;color:var(--muted)}
-.manage{margin-top:10px}
-.manage summary{font-weight:850;cursor:pointer}
-.manage-row{display:grid;grid-template-columns:45px 1fr auto;gap:7px;margin-top:7px}
-.manage-row input[type=color]{width:45px;height:40px;padding:2px;border:1px solid var(--line);border-radius:9px;background:white}
-.empty{color:var(--muted);text-align:center;padding:16px;font-size:13px}
-@media(max-width:420px){
-  .main-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .main-btn{min-height:50px}
-}
-</style>
-</head>
-<body>
-<div class="app">
-<header>
-  <h1>時間の塊</h1>
-  <div class="subtle">押したら始まる。あとで直せる。</div>
-</header>
-
-<section class="card">
-  <div class="between">
-    <div class="status" id="status">メインを選んでください</div>
-    <div class="now-clock" id="nowClock"></div>
-  </div>
-  <div class="timer" id="timer">00:00:00</div>
-
-  <div class="label">メイン</div>
-  <div class="main-grid" id="mainGrid"></div>
-
-  <div class="between">
-    <div class="label" style="margin-bottom:7px">サブ</div>
-    <button class="small" id="subManageBtn">＋ 登録</button>
-  </div>
-  <div class="sub-wrap"><div class="sub-grid" id="subGrid"></div></div>
-
-  <button class="start-btn" id="startBtn">▶ スタート</button>
-
-  <div class="memo-live" id="liveMemoWrap" hidden>
-    <div class="label">計測中の内訳</div>
-    <input type="text" id="liveMemo" placeholder="途中でも書けます（自動保存）">
-  </div>
-</section>
-
-<section class="card">
-  <div class="between">
-    <b>1日の始まり</b>
-    <span class="subtle">数字を左右に動かす</span>
-  </div>
-  <div class="day-control" id="dayControl">
-    <div class="day-time" id="dayTime">08:00</div>
-    <div class="day-hint">15分単位。左右にドラッグ／スワイプ</div>
-  </div>
-
-  <div class="timeline-head">
-    <b>今日の時間バー</b>
-    <span class="now-clock" id="timelineNow"></span>
-  </div>
-  <div class="timeline" id="timeline"></div>
-  <div class="edge-labels"><span id="rangeStart"></span><span id="rangeEnd"></span></div>
-  <div class="subtle" style="margin-top:6px">計測中の色もリアルタイムで伸びます。</div>
-</section>
-
-<section class="card">
-  <div class="between"><b>今日の履歴</b><button class="small danger" id="clearToday">今日を削除</button></div>
-  <div id="history"></div>
-</section>
-
-<section class="card">
-  <b>今日の合計</b>
-  <div class="stats" id="stats" style="margin-top:8px"></div>
-</section>
-
-<section class="card">
-<details class="manage">
-  <summary>メイン色・名前を編集</summary>
-  <div id="mainManage"></div>
-  <button class="small" id="addMain" style="margin-top:9px">＋ メイン追加</button>
-</details>
-</section>
-</div>
-
+:root{--bg:#f7f3ee;--card:#fffaf4;--text:#2c2520;--muted:#7b6d62;--line:#eadfd3;--danger:#b94b4b;--shadow:0 8px 24px rgba(67,48,32,.09)}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:linear-gradient(#fbf7f2,#f1e8df);color:var(--text);min-height:100vh}button,input,select,textarea{font:inherit}.app{max-width:760px;margin:auto;padding:7px 7px 55px}header{padding:3px 4px 6px}h1{margin:0;font-size:21px}.hint,.meta{color:var(--muted);font-size:11px;line-height:1.45}.card{background:rgba(255,250,244,.97);border:1px solid var(--line);border-radius:17px;padding:10px;box-shadow:var(--shadow);margin-bottom:9px}.now{text-align:center}.status{font-size:12px;color:var(--muted)}.timer{font-variant-numeric:tabular-nums;font-size:34px;font-weight:850;letter-spacing:.03em;margin:2px 0 5px}.picker-title,.section-title{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:7px 0 4px}.picker-title b{font-size:12px}h2{margin:0;font-size:17px}.chips{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px 3px;padding:3px 0 5px}.chip{min-width:0;border:0;background:transparent;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:800}.disc{width:37px;height:37px;border-radius:10px;border:3px solid transparent;box-shadow:0 3px 7px rgba(0,0,0,.13)}.chip.selected .disc{border-color:#2c2520;box-shadow:0 0 0 2px white,0 4px 9px rgba(0,0,0,.2)}.chip-label{width:100%;font-size:9px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sub-strip{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,47px);grid-auto-columns:52px;gap:4px;overflow-x:auto;overscroll-behavior-x:contain;padding:3px 1px 6px}.sub-chip{border:1px solid var(--line);border-radius:10px;background:white;padding:3px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}.sub-chip .disc{width:27px;height:27px;border:2px solid transparent;border-radius:8px}.sub-chip.running{outline:2px solid #2c2520}.sub-chip.add{font-size:11px;font-weight:800;color:var(--text);position:sticky;left:0;z-index:2}.sub-chip span:last-child{font-size:8px;max-width:46px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.selection{display:flex;align-items:center;gap:7px;margin:3px 0;padding:6px 8px;border-radius:11px;background:white;border:1px solid var(--line);text-align:left}.barswatch{width:16px;height:37px;border-radius:6px}.subswatch{width:7px;height:37px;border-radius:4px}.selection strong{font-size:13px}.selection .meta{font-size:11px}.bigbtn{width:100%;border:0;border-radius:16px;padding:12px;font-size:20px;font-weight:900;color:white;box-shadow:0 7px 14px rgba(50,38,28,.17);margin-top:5px;text-shadow:0 1px 2px rgba(0,0,0,.25)}.smallbtn{border:1px solid var(--line);background:white;border-radius:10px;padding:6px 7px;color:var(--text);font-size:11px;font-weight:750}.danger{color:var(--danger)!important}.runmemo{margin-top:7px;text-align:left}.runmemo input{padding:8px;font-size:14px}.day-control{display:flex;align-items:center;justify-content:space-between;margin:0 0 2px}.day-swipe{touch-action:none;user-select:none;border:1px solid var(--line);background:white;border-radius:10px;padding:5px 9px;font-size:11px;font-weight:800}.scale{position:relative;height:17px;margin:0 2px;color:var(--muted);font-size:8px}.scale span{position:absolute;transform:translateX(-50%);white-space:nowrap}.scale .now-label{color:#9b352f;font-weight:900}.timeline-label{display:flex;justify-content:space-between;margin:5px 0 3px;font-size:11px;font-weight:800}.timeline{position:relative;height:37px;border-radius:11px;overflow:hidden;background:#f3ece5;border:1px solid var(--line)}.guide,.now-line{position:absolute;top:0;bottom:0;width:1px;background:rgba(90,75,65,.09);pointer-events:none}.now-line{width:2px;background:#b54c46;z-index:3}.seg{position:absolute;top:0;height:100%;min-width:1px;border:0;padding:0 2px;color:white;text-shadow:0 1px 2px #555;font-size:9px;font-weight:850;white-space:nowrap;overflow:hidden}.filters{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px}.filter{flex:none;border:1px solid var(--line);border-radius:999px;background:white;padding:5px 8px;font-size:10px}.filter.active{outline:2px solid #2c2520}.log{border-top:1px solid var(--line);padding:9px 0}.log:first-child{border-top:0}.log-summary{display:flex;gap:8px;cursor:pointer}.swatches{display:flex;gap:2px;padding-top:2px}.swatch{width:13px;height:19px;border-radius:4px}.log-title{font-size:13px;font-weight:850}.inline-edit{margin:8px 0 2px;padding:9px;background:#f7f0e8;border-radius:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}.field label{display:block;font-size:10px;color:var(--muted);margin:4px 0}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:white;padding:8px;font-size:13px}.field textarea{resize:vertical;min-height:48px}.range-row{display:grid;grid-template-columns:40px 1fr 40px;gap:5px;align-items:center;font-size:10px}.range-row input{padding:0}.edit-actions{display:flex;gap:5px;justify-content:flex-end;margin-top:8px}.empty{text-align:center;color:var(--muted);padding:16px 5px}dialog{border:0;border-radius:19px;padding:0;width:min(94vw,520px);max-height:88vh;box-shadow:0 24px 70px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:14px;background:var(--card);overflow:auto;max-height:88vh}.palette{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:7px 0}.palette button{aspect-ratio:1;border-radius:9px;border:2px solid transparent}.palette button.selected{border-color:#222;box-shadow:0 0 0 2px white}.new-box{padding:10px;background:#fff;border:1px solid var(--line);border-radius:12px}.new-box input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px}.divider{border:0;border-top:1px solid var(--line);margin:18px 0 12px}.profile-row{padding:9px 0;border-bottom:1px solid var(--line)}.profile-row input{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px}.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.dialog-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}.install{padding:8px;border-radius:12px;background:white;border:1px dashed var(--line);margin-top:8px;text-align:left;font-size:11px}
+@media(max-width:390px){.disc{width:34px;height:34px}.chips{gap:4px 2px}.smallbtn{padding:5px 6px}.timer{font-size:31px}}
+</style></head><body><div class="app"><header><h1>時間の塊</h1></header>
+<section class="card now"><div class="status" id="status"></div><div class="timer" id="timer">00:00:00</div><div class="picker-title"><b>メイン色</b><button class="smallbtn" onclick="openProfiles('main')">＋ 登録・編集</button></div><div class="chips" id="mainPicker"></div><div class="picker-title"><b>サブ（押すとすぐ計測）</b><button class="smallbtn" onclick="openProfiles('sub')">一覧を編集</button></div><div class="sub-strip" id="subPicker"></div><div class="selection"><div class="barswatch" id="previewMain"></div><div class="subswatch" id="previewSub"></div><div><strong id="previewText"></strong><div class="meta" id="previewSubText"></div></div></div><button class="bigbtn" id="mainBtn">▶ スタート</button><div class="runmemo" id="runMemoWrap" hidden><input id="runMemo" placeholder="計測中の内訳・メモ（自動保存）"></div><details class="install"><summary><b>ホーム画面への置き方</b></summary><div class="hint">iPhoneのSafariで共有 →「ホーム画面に追加」。</div></details></section>
+<section class="card"><div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div><div class="day-control"><span class="hint">目盛りの近くを左右に動かせます</span><div class="day-swipe" id="daySwipe">1日の始まり <span id="dayStartText"></span></div></div><div class="scale" id="timelineScale"></div><div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div><div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div></section>
+<section class="card"><div class="section-title"><h2>絞り込み</h2><button class="smallbtn" onclick="setFilter('all','all')">すべて</button></div><div class="filters" id="mainFilters"></div><div class="filters" id="subFilters" style="margin-top:5px"></div></section>
+<section class="card"><div class="section-title"><h2>今日の履歴</h2><button class="smallbtn" id="editLatestBtn">直前を編集</button></div><div id="logs"></div></section></div>
+<dialog id="profilesDialog"><div class="dialog-inner"><h2 id="profilesTitle"></h2><div class="new-box"><b>＋ 新規追加</b><div style="height:7px"></div><input id="newName" placeholder="最初に名前を入力（空欄でも可）"><div class="palette" id="newPalette"></div><button class="smallbtn" id="addProfile">保存</button></div><hr class="divider"><b>既存一覧</b><div id="profileList"></div><div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('profilesDialog').close()">閉じる</button><button class="smallbtn" id="saveProfiles">変更を保存</button></div></div></dialog>
 <script>
-const $=id=>document.getElementById(id);
-const KEYS={profiles:"wl12_profiles",logs:"wl12_logs",running:"wl12_running",start:"wl12_day_start"};
-
-const defaults=[
- {id:"life",name:"生活",color:"#c85e89",subs:[
-  {id:"sleep",name:"寝る",color:"#735ca8"},
-  {id:"brush",name:"歯磨き",color:"#5ca0b8"},
-  {id:"meal",name:"ご飯",color:"#d78a3f"},
-  {id:"bath",name:"風呂",color:"#4ca7a0"},
-  {id:"drama",name:"ドラマ",color:"#8a68b1"}
- ]},
- {id:"house",name:"家事",color:"#d88738",subs:[
-  {id:"cook",name:"料理",color:"#d56e42"},
-  {id:"clean",name:"掃除",color:"#6c9b68"}
- ]},
- {id:"aoki",name:"青木さん",color:"#3777c8",subs:[
-  {id:"twitter",name:"Twitter",color:"#4f8fd8"},
-  {id:"comment",name:"コメント",color:"#6f7fd0"},
-  {id:"commentmake",name:"コメント制作",color:"#7c67bd"}
- ]},
- {id:"manga",name:"漫画",color:"#3f9863",subs:[
-  {id:"machida",name:"町田先生",color:"#4a8868"},
-  {id:"hoshimi",name:"星見先生",color:"#65a479"}
- ]}
-];
-
-let profiles=load(KEYS.profiles,defaults);
-let logs=load(KEYS.logs,[]);
-let running=load(KEYS.running,null);
-let dayStartMin=Number(localStorage.getItem(KEYS.start)??480);
-let selectedMain=profiles[0]?.id||"";
-let selectedSub="";
-let openEditorId=null;
-
-function clone(x){return JSON.parse(JSON.stringify(x))}
-function load(key,fallback){try{let x=JSON.parse(localStorage.getItem(key));return x??clone(fallback)}catch{return clone(fallback)}}
-function save(){
- localStorage.setItem(KEYS.profiles,JSON.stringify(profiles));
- localStorage.setItem(KEYS.logs,JSON.stringify(logs));
- localStorage.setItem(KEYS.running,JSON.stringify(running));
- localStorage.setItem(KEYS.start,String(dayStartMin));
-}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function esc(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function pad(n){return String(n).padStart(2,"0")}
-function fmtClock(ts){const d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
-function fmtDuration(ms){
- ms=Math.max(0,ms);const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
- return h?`${h}時間${m}分`:(m?`${m}分${ss?ss+"秒":""}`:`${ss}秒`);
-}
-function fmtTimer(ms){const s=Math.floor(Math.max(0,ms)/1000);return `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`}
-function mainBy(id){return profiles.find(x=>x.id===id)}
-function subBy(mainId,subId){return mainBy(mainId)?.subs?.find(x=>x.id===subId)}
-function dayBounds(ts=Date.now()){
- const d=new Date(ts);
- const start=new Date(d);start.setHours(0,0,0,0);start.setMinutes(dayStartMin);
- if(ts<start.getTime())start.setDate(start.getDate()-1);
- return {start:start.getTime(),end:start.getTime()+86400000};
-}
-function currentDayLogs(){
- const b=dayBounds();
- return logs.filter(l=>l.end>b.start&&l.start<b.end).sort((a,b)=>a.start-b.start);
-}
-function stopRunning(stopAt=Date.now()){
- if(!running)return;
- if(stopAt>running.start){
-  logs.push({...running,id:uid(),end:stopAt});
- }
- running=null;save();
-}
-function startNew(mainId,subId=""){
- const now=Date.now();
- if(running)stopRunning(now);
- running={start:now,mainId,subId,memo:""};
- selectedMain=mainId;selectedSub=subId;
- save();renderAll();
-}
-function toggleStart(){
- if(running){stopRunning();renderAll();return}
- if(!selectedMain)return;
- startNew(selectedMain,selectedSub);
-}
-
-function renderMain(){
- $("mainGrid").innerHTML=profiles.map(m=>`
- <button class="main-btn ${selectedMain===m.id?"active":""}" data-id="${m.id}">
-  <div class="color-dot" style="background:${m.color}"></div>
-  <div class="main-name">${esc(m.name||"名前なし")}</div>
- </button>`).join("");
- [...$("mainGrid").children].forEach(b=>b.onclick=()=>{
-  selectedMain=b.dataset.id;selectedSub="";renderAll();
- });
-}
-function renderSubs(){
- const m=mainBy(selectedMain);
- const subs=m?.subs||[];
- $("subGrid").innerHTML=subs.length?subs.map(s=>`
- <button class="sub-btn ${selectedSub===s.id?"active":""}" data-id="${s.id}">
-  <span class="sub-swatch" style="background:${s.color}"></span>
-  <span class="sub-name">${esc(s.name||"名前なし")}</span>
- </button>`).join(""):`<div class="empty">登録されたサブはありません</div>`;
- [...$("subGrid").querySelectorAll(".sub-btn")].forEach(b=>b.onclick=()=>{
-  selectedSub=b.dataset.id;
-  startNew(selectedMain,selectedSub);
- });
-}
-function renderRunning(){
- const m=running?mainBy(running.mainId):mainBy(selectedMain);
- const s=running?subBy(running.mainId,running.subId):subBy(selectedMain,selectedSub);
- $("status").textContent=running?`計測中：${m?.name||"名前なし"}${s?" ／ "+s.name:""}`:"メインを選んでください";
- $("timer").textContent=running?fmtTimer(Date.now()-running.start):"00:00:00";
- $("startBtn").textContent=running?"■ ストップ":"▶ スタート";
- $("startBtn").classList.toggle("stop",!!running);
- $("startBtn").style.background=m?.color||"#4b4a48";
- $("liveMemoWrap").hidden=!running;
- if(running&&document.activeElement!==$("liveMemo"))$("liveMemo").value=running.memo||"";
-}
-function renderDayControl(){
- $("dayTime").textContent=`${pad(Math.floor(dayStartMin/60)%24)}:${pad(dayStartMin%60)}`;
- const b=dayBounds();
- $("rangeStart").textContent=fmtClock(b.start);
- $("rangeEnd").textContent=`翌 ${fmtClock(b.end)}`;
-}
-function timelineSegment(log,b,ongoing=false){
- const end=ongoing?Date.now():log.end;
- const start=Math.max(log.start,b.start), clippedEnd=Math.min(end,b.end);
- if(clippedEnd<=start)return "";
- const left=(start-b.start)/86400000*100;
- const width=(clippedEnd-start)/86400000*100;
- const m=mainBy(log.mainId),s=subBy(log.mainId,log.subId);
- const color=s?.color||m?.color||"#888";
- const title=`${m?.name||""}${s?" / "+s.name:""} ${fmtClock(log.start)}〜${ongoing?"計測中":fmtClock(log.end)}`;
- return `<button class="segment" style="left:${left}%;width:${width}%;background:${color};z-index:${ongoing?3:2}" ${ongoing?"":`data-edit="${log.id}"`} title="${esc(title)}">${width>10?esc(s?.name||m?.name||""):""}</button>`;
-}
-function renderTimeline(){
- const b=dayBounds();
- let html=currentDayLogs().map(l=>timelineSegment(l,b)).join("");
- if(running&&running.start<b.end&&Date.now()>b.start)html+=timelineSegment(running,b,true);
- const now=Date.now();
- if(now>=b.start&&now<=b.end){
-  html+=`<span class="current-line" style="left:${(now-b.start)/86400000*100}%"></span>`;
- }
- $("timeline").innerHTML=html;
- $("timelineNow").textContent=`現在 ${fmtClock(now)}`;
- [...$("timeline").querySelectorAll("[data-edit]")].forEach(b=>b.onclick=()=>{openEditorId=b.dataset.edit;renderHistory()});
-}
-
-function minuteInDay(ts,b){return Math.max(0,Math.min(1440,Math.round((ts-b.start)/60000)))}
-function optionsMain(selected){return profiles.map(m=>`<option value="${m.id}" ${m.id===selected?"selected":""}>${esc(m.name||"名前なし")}</option>`).join("")}
-function optionsSub(mainId,selected){return `<option value="">サブなし</option>`+(mainBy(mainId)?.subs||[]).map(s=>`<option value="${s.id}" ${s.id===selected?"selected":""}>${esc(s.name||"名前なし")}</option>`).join("")}
-
-function renderHistory(){
- const b=dayBounds();
- const list=currentDayLogs().slice().reverse();
- if(!list.length){$("history").innerHTML=`<div class="empty">まだ履歴はありません</div>`;return}
- $("history").innerHTML=list.map(l=>{
-  const m=mainBy(l.mainId),s=subBy(l.mainId,l.subId),open=openEditorId===l.id;
-  const startMin=minuteInDay(l.start,b),endMin=minuteInDay(l.end,b);
-  return `<div class="history-item" data-id="${l.id}">
-   <div class="history-top" data-open="${l.id}">
-    <div class="swatches"><span class="swatch" style="background:${m?.color||"#aaa"}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div>
-    <div style="flex:1">
-     <div class="hist-title">${esc(m?.name||"名前なし")}${s?` ／ ${esc(s.name)}`:""}</div>
-     <div class="hist-meta">${esc(l.memo||"内訳なし")}<br>${fmtClock(l.start)}〜${fmtClock(l.end)} ・ ${fmtDuration(l.end-l.start)}</div>
-    </div>
-    <button class="small">${open?"閉じる":"編集"}</button>
-   </div>
-   ${open?`<div class="inline-editor">
-    <label>メイン</label><select class="edit-main">${optionsMain(l.mainId)}</select>
-    <label>サブ</label><select class="edit-sub">${optionsSub(l.mainId,l.subId)}</select>
-    <label>内訳</label><input type="text" class="edit-memo" value="${esc(l.memo||"")}">
-    <div class="range-row">
-      <div class="range-times"><span class="start-label">${fmtClock(l.start)}</span><span class="end-label">${fmtClock(l.end)}</span></div>
-      <label>開始時間を横にスライド</label>
-      <input class="range-start" type="range" min="0" max="1439" step="1" value="${startMin}">
-      <label>終了時間を横にスライド</label>
-      <input class="range-end" type="range" min="1" max="1440" step="1" value="${endMin}">
-    </div>
-    <div class="editor-actions"><button class="small danger delete-log">削除</button><button class="small save-edit">保存</button></div>
-   </div>`:""}
-  </div>`;
- }).join("");
-
- [...$("history").querySelectorAll("[data-open]")].forEach(el=>el.onclick=e=>{
-  if(e.target.closest("button")||e.currentTarget===null){}
-  const id=el.dataset.open;openEditorId=openEditorId===id?null:id;renderHistory();
- });
- const item=$("history").querySelector(".history-item .inline-editor");
- if(item){
-  const wrap=item.closest(".history-item"),id=wrap.dataset.id,l=logs.find(x=>x.id===id);
-  const mainSel=item.querySelector(".edit-main"),subSel=item.querySelector(".edit-sub");
-  mainSel.onchange=()=>{subSel.innerHTML=optionsSub(mainSel.value,"")};
-  const rs=item.querySelector(".range-start"),re=item.querySelector(".range-end");
-  const updateLabels=()=>{
-   if(Number(rs.value)>=Number(re.value)) {
-    if(document.activeElement===rs) re.value=Math.min(1440,Number(rs.value)+1);
-    else rs.value=Math.max(0,Number(re.value)-1);
-   }
-   item.querySelector(".start-label").textContent=fmtClock(b.start+Number(rs.value)*60000);
-   item.querySelector(".end-label").textContent=fmtClock(b.start+Number(re.value)*60000);
-  };
-  rs.oninput=updateLabels;re.oninput=updateLabels;
-  item.querySelector(".save-edit").onclick=()=>{
-   l.mainId=mainSel.value;l.subId=subSel.value;l.memo=item.querySelector(".edit-memo").value;
-   l.start=b.start+Number(rs.value)*60000;l.end=b.start+Number(re.value)*60000;
-   if(l.end<=l.start)l.end=l.start+60000;
-   save();renderAll();
-  };
-  item.querySelector(".delete-log").onclick=()=>{
-   logs=logs.filter(x=>x.id!==id);openEditorId=null;save();renderAll();
-  };
- }
-}
-function renderStats(){
- const totals={};
- currentDayLogs().forEach(l=>totals[l.mainId]=(totals[l.mainId]||0)+(l.end-l.start));
- if(running){
-  const b=dayBounds();if(running.start<b.end&&Date.now()>b.start)totals[running.mainId]=(totals[running.mainId]||0)+(Date.now()-Math.max(running.start,b.start));
- }
- const rows=profiles.filter(m=>totals[m.id]).sort((a,b)=>totals[b.id]-totals[a.id]);
- $("stats").innerHTML=rows.length?rows.map(m=>`<div class="stat"><b>${esc(m.name||"名前なし")}</b><span>${fmtDuration(totals[m.id])}</span></div>`).join(""):`<div class="empty" style="grid-column:1/-1">まだ記録はありません</div>`;
-}
-function renderManage(){
- $("mainManage").innerHTML=profiles.map(m=>`<div class="manage-row" data-id="${m.id}">
- <input type="color" value="${m.color}">
- <input type="text" value="${esc(m.name)}" placeholder="名前">
- <button class="small danger">削除</button>
- </div>`).join("");
- [...$("mainManage").querySelectorAll(".manage-row")].forEach(row=>{
-  const m=mainBy(row.dataset.id),inputs=row.querySelectorAll("input");
-  inputs[0].oninput=()=>{m.color=inputs[0].value;save();renderMain();renderTimeline()};
-  inputs[1].onchange=()=>{m.name=inputs[1].value;save();renderAll()};
-  row.querySelector("button").onclick=()=>{profiles=profiles.filter(x=>x.id!==m.id);if(selectedMain===m.id)selectedMain=profiles[0]?.id||"";save();renderAll()};
- });
-}
-function openSubManager(){
- const m=mainBy(selectedMain);if(!m)return;
- const text=prompt(`${m.name}の新しいサブ名`);
- if(text===null||!text.trim())return;
- const color=prompt("色（例 #4ca7a0）",m.color)||m.color;
- m.subs=m.subs||[];m.subs.push({id:uid(),name:text.trim(),color:/^#[0-9a-f]{6}$/i.test(color)?color:m.color});
- save();renderAll();
-}
-function renderAll(){
- renderMain();renderSubs();renderRunning();renderDayControl();renderTimeline();renderHistory();renderStats();renderManage();
-}
-
-$("startBtn").onclick=toggleStart;
-$("liveMemo").oninput=()=>{if(running){running.memo=$("liveMemo").value;save()}};
-$("subManageBtn").onclick=openSubManager;
-$("addMain").onclick=()=>{
- profiles.push({id:uid(),name:"",color:"#7a8794",subs:[]});selectedMain=profiles.at(-1).id;save();renderAll();
-};
-$("clearToday").onclick=()=>{
- if(!confirm("今日の履歴をすべて削除しますか？"))return;
- const b=dayBounds();logs=logs.filter(l=>!(l.end>b.start&&l.start<b.end));save();renderAll();
-};
-
-let dragStartX=null,dragStartValue=0,lastStep=null;
-function beginDrag(x){dragStartX=x;dragStartValue=dayStartMin;lastStep=null}
-function moveDrag(x){
- if(dragStartX===null)return;
- const steps=Math.round((x-dragStartX)/18);
- if(steps===lastStep)return;
- lastStep=steps;
- dayStartMin=(dragStartValue+steps*15)%1440;if(dayStartMin<0)dayStartMin+=1440;
- save();renderDayControl();renderTimeline();renderHistory();renderStats();
-}
-function endDrag(){dragStartX=null;lastStep=null}
-$("dayControl").addEventListener("pointerdown",e=>{$("dayControl").setPointerCapture(e.pointerId);beginDrag(e.clientX)});
-$("dayControl").addEventListener("pointermove",e=>moveDrag(e.clientX));
-$("dayControl").addEventListener("pointerup",endDrag);
-$("dayControl").addEventListener("pointercancel",endDrag);
-
-setInterval(()=>{
- $("nowClock").textContent=`現在 ${fmtClock(Date.now())}`;
- renderRunning();renderTimeline();renderStats();
-},1000);
-
-renderAll();
-$("nowClock").textContent=`現在 ${fmtClock(Date.now())}`;
-
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
-</script>
-</body>
-</html>
+const $=id=>document.getElementById(id),LOG_KEY="work_logs_v3",RUN_KEY="running_timer_v3",PROFILE_KEY="work_profiles_v3",SET_KEY="work_settings_v3";
+const palette=["#D95C58","#D8AD3F","#45AEB0","#8066B6","#8EBB4A","#496B9B","#E07A5F","#6FBFA7","#A58BC6","#C85E89","#3777C8","#3F9863","#94715E","#75808C","#4A4A4A","#F0A3B8"];
+const defaults={main:[{id:"blue",name:"青木さん",color:"#3777c8"},{id:"green",name:"漫画",color:"#3f9863"},{id:"orange",name:"仕事",color:"#d88738"},{id:"pink",name:"生活",color:"#c85e89"},...palette.slice(0,12).map((c,i)=>({id:"blank"+i,name:"",color:c}))],sub:[{id:"twitter",mainId:"blue",name:"Twitter",color:"#4f9be8",uses:0},{id:"movie",mainId:"blue",name:"映画",color:"#7459b8",uses:0},{id:"comment",mainId:"blue",name:"コメント",color:"#d05a79",uses:0},{id:"sleep",mainId:"pink",name:"寝起き",color:"#7893a8",uses:0}]};
+const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||"null")??f}catch{return f}},uid=()=>crypto.randomUUID?.()||String(Date.now()+Math.random());
+let oldP=read("work_profiles_v2",null),profiles=read(PROFILE_KEY,null);if(!profiles){profiles=oldP||structuredClone(defaults);profiles.sub=(profiles.sub||[]).map(s=>({...s,mainId:s.mainId||profiles.main[0]?.id||"",uses:s.uses||0}));}
+let logs=read(LOG_KEY,null);if(!logs)logs=read("work_logs_v2",read("work_logs_v1",[])).map(x=>({id:x.id||uid(),start:+x.start,end:+x.end,mainId:x.mainId||"",subId:x.subId||"",memo:x.memo??x.task??"",legacyColor:x.legacyColor||x.color}));
+let running=read(RUN_KEY,null)||read("running_timer_v2",null),settings=read(SET_KEY,{dayStart:0});if(running&&!('memo'in running))running.memo="";
+let selectedMain=running?.mainId||profiles.main[0]?.id||"",selectedSub=running?.subId||"",filterMain="all",filterSub="all",openEditId=null,profileMode="main",newColor="";
+const pad=n=>String(n).padStart(2,"0"),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])),fmtTime=t=>{let d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes())},fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return pad(Math.floor(s/3600))+":"+pad(Math.floor(s%3600/60))+":"+pad(s%60)},fmtDur=ms=>{let m=Math.max(0,Math.floor(ms/60000)),h=Math.floor(m/60);return h?`${h}時間${m%60}分`:`${m}分`};
+function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));localStorage.setItem(SET_KEY,JSON.stringify(settings));running?localStorage.setItem(RUN_KEY,JSON.stringify(running)):localStorage.removeItem(RUN_KEY)}
+const getP=(k,id,l)=>profiles[k].find(p=>p.id===id)||(id?.startsWith("legacy_")?{id,name:"旧データ",color:l?.legacyColor||"#888"}:null);
+function bounds(ts=Date.now()){let d=new Date(ts),mins=d.getHours()*60+d.getMinutes(),off=settings.dayStart||0;if(mins<off)d.setDate(d.getDate()-1);d.setHours(0,0,0,0);let start=d.getTime()+off*60000;return{start,end:start+86400000}}
+function dayLogs(){let b=bounds();return logs.filter(l=>l.end>b.start&&l.start<b.end).sort((a,b)=>a.start-b.start)}
+function visibleLogs(){return dayLogs().filter(l=>(filterMain==="all"||l.mainId===filterMain)&&(filterSub==="all"||l.subId===filterSub))}
+function renderMain(){let latest=new Map;[...logs,...(running?[{...running,end:Date.now()}]:[])].forEach(l=>latest.set(l.mainId,Math.max(latest.get(l.mainId)||0,l.start||0)));let arr=profiles.main.map((p,i)=>({p,i,t:latest.get(p.id)||0})).sort((a,b)=>b.t-a.t||a.i-b.i).map(x=>x.p);$("mainPicker").innerHTML=arr.map(p=>`<button class="chip ${p.id===selectedMain?'selected':''}" data-id="${p.id}"><span class="disc" style="background:${p.color}"></span>${p.name?`<span class="chip-label">${esc(p.name)}</span>`:""}</button>`).join("");$("mainPicker").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedMain=b.dataset.id;selectedSub="";renderAll()})}
+function subsForMain(){return profiles.sub.filter(s=>s.mainId===selectedMain).sort((a,b)=>(b.uses||0)-(a.uses||0)||String(a.name).localeCompare(String(b.name),"ja"))}
+function renderSubs(){$("subPicker").innerHTML=`<button class="sub-chip add" id="quickAdd">＋新規</button>`+subsForMain().map(s=>`<button class="sub-chip ${running?.subId===s.id?'running':''}" data-id="${s.id}"><span class="disc" style="background:${s.color}"></span><span>${esc(s.name||"名前なし")}</span></button>`).join("");$("quickAdd").onclick=()=>openProfiles("sub");$("subPicker").querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>switchToSub(b.dataset.id))}
+function finishRunning(now=Date.now()){if(!running)return;logs.push({id:uid(),start:+running.start,end:now,mainId:running.mainId,subId:running.subId||"",memo:running.memo||""});running=null}
+function switchToSub(id){let s=getP("sub",id);if(!s)return;let now=Date.now();finishRunning(now);selectedMain=s.mainId;selectedSub=id;s.uses=(s.uses||0)+1;running={start:now,mainId:s.mainId,subId:id,memo:""};save();renderAll()}
+function startTimer(){if(!selectedMain)return;running={start:Date.now(),mainId:selectedMain,subId:selectedSub,memo:""};save();renderAll()}function stopTimer(){finishRunning();selectedSub="";save();renderAll()}
+function renderNow(){let m=getP("main",running?.mainId||selectedMain,running),s=getP("sub",running?.subId||selectedSub,running);$("previewMain").style.background=m?.color||"#888";$("previewSub").style.background=s?.color||"transparent";$("previewSub").style.opacity=s?1:.15;$("previewText").textContent=m?.name||"名前なし";$("previewSubText").textContent=s?"サブ："+(s.name||"名前なし"):"サブなし";$("mainBtn").style.background=m?.color||"#555";$("runMemoWrap").hidden=!running;if(running){$("status").textContent=`計測中　${fmtTime(running.start)}開始`;$("timer").textContent=fmtTimer(Date.now()-running.start);$("mainBtn").textContent="■ ストップ";if(document.activeElement!==$("runMemo"))$("runMemo").value=running.memo||""}else{$("status").textContent="メインを選んでスタート、またはサブをタップ";$("timer").textContent="00:00:00";$("mainBtn").textContent="▶ スタート"}}
+function scaleHTML(){let b=bounds(),now=Date.now(),labels=new Set([0,360,720,1080,1440]);let pos=(now-b.start)/60000;if(pos>=0&&pos<=1440)for(let d=-4;d<=2;d++)labels.add(Math.round(pos/60)*60+d*60);return[...labels].filter(x=>x>=0&&x<=1440).sort((a,b)=>a-b).map(x=>{let t=new Date(b.start+x*60000),is=Math.abs(x-pos)<45;return `<span class="${is?'now-label':''}" style="left:${x/14.4}%">${t.getHours()}時</span>`}).join("")}
+function renderTimeline(kind){let list=visibleLogs(),b=bounds(),now=Date.now();if(running&&running.start<b.end&&now>b.start)list=[...list,{...running,id:"running",end:now}];if(kind==="sub")list=list.filter(l=>l.subId);let total=list.reduce((z,l)=>z+Math.max(0,Math.min(l.end,b.end)-Math.max(l.start,b.start)),0);$(kind+"Total").textContent=total?fmtDur(total):"";let guides=Array.from({length:25},(_,i)=>`<i class="guide" style="left:${i/24*100}%"></i>`).join(""),nl=now>b.start&&now<b.end?`<i class="now-line" style="left:${(now-b.start)/864000}%"></i>`:"";let segs=list.map(l=>{let st=Math.max(l.start,b.start),en=Math.min(l.end,b.end),w=(en-st)/864000,lft=(st-b.start)/864000,p=getP(kind,l[kind+"Id"],l);return en>st?`<button class="seg" style="left:${lft}%;width:${w}%;background:${p?.color||'#bbb'}" ${l.id==='running'?'':`onclick="openInline('${l.id}')"`}>${w>9?fmtTime(l.start):""}</button>`:""}).join("");$(kind+"Timeline").innerHTML=guides+segs+nl}
+function renderFilters(){$("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:4px"></i>${esc(p.name||"名前なし")}</button>`).join("");$("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:4px"></i>${esc(p.name||"名前なし")}</button>`).join("")}
+function editHTML(l){let b=bounds(l.start),startMin=Math.max(0,Math.min(1439,Math.round((l.start-b.start)/60000))),endMin=Math.max(1,Math.min(1440,Math.round((l.end-b.start)/60000))),subs=profiles.sub.filter(s=>s.mainId===l.mainId);return `<div class="inline-edit" onclick="event.stopPropagation()"><div class="field"><label>メモ・内訳（入力すると自動保存）</label><textarea id="eMemo">${esc(l.memo||"")}</textarea></div><div class="grid2"><div class="field"><label>メイン</label><select id="eMain">${profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name||'名前なし')}</option>`).join('')}</select></div><div class="field"><label>サブ</label><select id="eSub"><option value="">なし</option>${subs.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name||'名前なし')}</option>`).join('')}</select></div></div><div class="field"><label>開始</label><div class="range-row"><span id="eStartT">${fmtTime(l.start)}</span><input id="eStart" type="range" min="0" max="1439" step="1" value="${startMin}"><span></span></div></div><div class="field"><label>終了</label><div class="range-row"><span id="eEndT">${fmtTime(l.end)}</span><input id="eEnd" type="range" min="1" max="1440" step="1" value="${endMin}"><span></span></div></div><div class="edit-actions"><button class="smallbtn danger" onclick="deleteLog('${l.id}')">削除</button><button class="smallbtn" onclick="closeInline()">閉じる</button></div></div>`}
+function renderLogs(){let list=visibleLogs().slice().reverse();$("logs").innerHTML=list.length?list.map(l=>{let m=getP("main",l.mainId,l),s=getP("sub",l.subId,l);return `<div class="log"><div class="log-summary" onclick="openInline('${l.id}')"><div class="swatches"><i class="swatch" style="background:${m?.color||'#bbb'}"></i>${s?`<i class="swatch" style="background:${s.color}"></i>`:''}</div><div><div class="log-title">${esc(m?.name||'名前なし')}${s?' ／ '+esc(s.name||'名前なし'):''}</div><div class="meta">${esc(l.memo||'内訳なし')}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}</div></div></div>${openEditId===l.id?editHTML(l):''}</div>`}).join(""):'<div class="empty">まだ履歴なし</div>';if(openEditId)bindInline()}
+function bindInline(){let l=logs.find(x=>x.id===openEditId);if(!l)return;let b=bounds(l.start),commit=()=>{save();renderTimeline('main');renderTimeline('sub')};$("eMemo").oninput=e=>{l.memo=e.target.value;commit()};$("eMain").onchange=e=>{l.mainId=e.target.value;l.subId="";save();renderAll()};$("eSub").onchange=e=>{l.subId=e.target.value;commit()};let change=(kind)=>e=>{let v=+e.target.value,t=b.start+v*60000;if(kind==='start'&&t<l.end)l.start=t;if(kind==='end'&&t>l.start)l.end=t;$(kind==='start'?'eStartT':'eEndT').textContent=fmtTime(kind==='start'?l.start:l.end);commit()};$("eStart").oninput=change('start');$("eEnd").oninput=change('end')}
+function openInline(id){openEditId=openEditId===id?null:id;renderLogs()}function closeInline(){openEditId=null;renderLogs()}function deleteLog(id){if(confirm("この記録を削除しますか？")){logs=logs.filter(l=>l.id!==id);openEditId=null;save();renderAll()}}function setFilter(m,s){if(m!==null)filterMain=m;if(s!==null)filterSub=s;renderAll()}
+function paletteHTML(selected){return palette.map(c=>`<button style="background:${c}" class="${selected===c?'selected':''}" data-color="${c}" aria-label="${c}"></button>`).join("")}
+function openProfiles(mode){profileMode=mode;newColor="";$("profilesTitle").textContent=(mode==='main'?'メイン':'サブ')+'の登録・編集';$("newName").value="";$("newPalette").innerHTML=paletteHTML("");bindPalette($("newPalette"),c=>{newColor=c});renderProfileRows();$("profilesDialog").showModal()}
+function bindPalette(root,cb){root.querySelectorAll("button").forEach(b=>b.onclick=()=>{root.querySelectorAll("button").forEach(x=>x.classList.remove('selected'));b.classList.add('selected');cb(b.dataset.color)})}
+function renderProfileRows(){let arr=profileMode==='sub'?profiles.sub.filter(s=>s.mainId===selectedMain):profiles.main;$("profileList").innerHTML=arr.map(p=>`<div class="profile-row" data-id="${p.id}"><input class="pname" value="${esc(p.name)}" placeholder="名前なしでもOK"><div class="palette">${paletteHTML(p.color)}</div><div class="row"><button class="smallbtn danger remove">削除</button></div></div>`).join("");$("profileList").querySelectorAll('.profile-row').forEach(row=>{let p=profiles[profileMode].find(x=>x.id===row.dataset.id);bindPalette(row.querySelector('.palette'),c=>p.color=c);row.querySelector('.remove').onclick=()=>{if(confirm('削除しますか？')){profiles[profileMode]=profiles[profileMode].filter(x=>x.id!==p.id);renderProfileRows()}}})}
+$("addProfile").onclick=()=>{let color=newColor||(profileMode==='sub'?getP('main',selectedMain)?.color:palette[profiles.main.length%palette.length])||'#888';let p={id:uid(),name:$("newName").value.trim(),color};if(profileMode==='sub'){p.mainId=selectedMain;p.uses=1;profiles.sub.push(p);finishRunning();selectedSub=p.id;running={start:Date.now(),mainId:selectedMain,subId:p.id,memo:""};save();$("profilesDialog").close();renderAll()}else{profiles.main.push(p);selectedMain=p.id;save();$("newName").value="";newColor="";$("newPalette").innerHTML=paletteHTML('');bindPalette($("newPalette"),c=>newColor=c);renderProfileRows();renderAll()}};
+$("saveProfiles").onclick=()=>{$("profileList").querySelectorAll('.profile-row').forEach(row=>{let p=profiles[profileMode].find(x=>x.id===row.dataset.id);if(p)p.name=row.querySelector('.pname').value.trim()});if(!getP('main',selectedMain))selectedMain=profiles.main[0]?.id||'';if(selectedSub&&!getP('sub',selectedSub))selectedSub='';save();$("profilesDialog").close();renderAll()};
+$("mainBtn").onclick=()=>running?stopTimer():startTimer();$("runMemo").oninput=e=>{if(running){running.memo=e.target.value;save()}};$("clearBtn").onclick=()=>{if(confirm("表示中の1日分を全部削除しますか？")){let b=bounds();logs=logs.filter(l=>!(l.end>b.start&&l.start<b.end));save();renderAll()}};$("editLatestBtn").onclick=()=>{let a=dayLogs();if(a.length)openInline(a[a.length-1].id)};
+let drag=null;$("daySwipe").onpointerdown=e=>{drag={x:e.clientX,start:settings.dayStart};e.currentTarget.setPointerCapture(e.pointerId)};$("daySwipe").onpointermove=e=>{if(!drag)return;let steps=Math.round((e.clientX-drag.x)/12),v=(drag.start+steps*15)%1440;if(v<0)v+=1440;settings.dayStart=v;save();renderDay()};$("daySwipe").onpointerup=$("daySwipe").onpointercancel=()=>drag=null;
+function renderDay(){$("dayStartText").textContent=pad(Math.floor(settings.dayStart/60))+":"+pad(settings.dayStart%60);$("timelineScale").innerHTML=scaleHTML();renderTimeline('main');renderTimeline('sub');renderLogs()}
+function renderAll(){renderMain();renderSubs();renderNow();renderFilters();renderDay()}setInterval(()=>{renderNow();$("timelineScale").innerHTML=scaleHTML();renderTimeline('main');renderTimeline('sub')},1000);renderAll();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
+</script></body></html>
