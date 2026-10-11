@@ -298,7 +298,7 @@ function renderSubQuick(){
 
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>{
-   // ★ 完全に修正：今クリックされて実行中のボタンID（quickId）が一致しているものだけをアクティブにする
+   // 【完全修正】現在実行中で、かつ保存されている quickId が一致しているボタン「だけ」を光らせます
    let isActive = false;
    if(running && running.quickId && running.quickId === q.id) {
      isActive = true;
@@ -470,6 +470,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=5");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=7");
 </script>
 </body></html>
