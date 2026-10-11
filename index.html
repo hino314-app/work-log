@@ -46,7 +46,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 .timeline-scale{display:flex;justify-content:space-between;margin:2px 1px 0;color:var(--muted);font-size:10px}
 
 /* One-tap dashboard */
-.subquick-title{font-weight:800;text-align:left;margin:12px 0 8px;font-size:13px;color:var(--muted)}
+.subquick-title{font-weight:800;text-align:left;margin:12px 0 8px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
 .subquick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}
 .subquick-btn{border:1px solid #eaded5;border-radius:12px;background:#fff9f5;min-height:68px;padding:6px 4px;font-weight:750;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
 .subquick-btn.active{outline:2px solid #b94377;background:#fce8f0}
@@ -79,9 +79,12 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <!-- 3列のメインボタン -->
 <div class="quick-grid" id="quickGrid"></div>
 
-<!-- 選択中のメインに対応するサブ（4列表示） -->
+<!-- 選択中のメインに対応するサブ（4列表示 + カスタマイズボタン） -->
 <div id="subQuickSection" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;" hidden>
-  <div class="subquick-title" id="subQuickTitle">サブ分類</div>
+  <div class="subquick-title">
+    <span id="subQuickTitle">サブ分類</span>
+    <button class="smallbtn" onclick="openSubQuickSettings()">⚙ サブを編集</button>
+  </div>
   <div class="subquick-grid" id="subQuickGrid"></div>
 </div>
 
@@ -149,9 +152,11 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 
 <dialog id="quickDialog"><div class="dialog-inner"><h2>よく使う項目の設定</h2><p class="hint">表示するボタンを編集できます。</p><div id="quickRows"></div><button class="smallbtn" onclick="addQuickRow()">＋ ボタンを追加</button><div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveQuickSettings()">保存</button></div></div></dialog>
 
+<dialog id="subQuickDialog"><div class="dialog-inner"><h2>サブ項目の設定</h2><p class="hint">このメイン項目で表示するサブボタンを編集できます。</p><div id="subQuickRows"></div><button class="smallbtn" onclick="addSubQuickRow()">＋ サブボタンを追加</button><div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('subQuickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveSubQuickSettings()">保存</button></div></div></dialog>
+
 <script>
 const $=id=>document.getElementById(id);
-const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1";
+const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1", SUB_QUICK_KEY="work_sub_quick_buttons_v1";
 
 const defaultProfiles={
  main:[
@@ -228,6 +233,39 @@ let quickButtons=(()=>{
 })();
 function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons))}
 
+const defaultSubGroups={
+ '家事':[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り'],['📌','その他']],
+ 'ご飯':[['🍳','料理'],['🥗','食事'],['🧼','片付け'],['📌','その他']],
+ 'お風呂':[['🚿','シャワー'],['🛀','入浴'],['🧴','スキンケア'],['📌','その他']],
+ 'ネーム':[['✍️','プロット'],['📖','ネーム'],['📝','修正'],['📌','その他']],
+ '仕事':[['💻','作業'],['📨','連絡'],['🗂️','整理'],['📌','その他']],
+ 'Twitter':[['𝕏','閲覧'],['💬','コメント'],['📝','投稿'],['📌','その他']],
+ 'イラスト':[['✏️','ラフ'],['🎨','彩色'],['✨','仕上げ'],['📌','その他']],
+ '睡眠':[['🌙','就寝'],['☀️','起床'],['📌','その他']],
+ '返信':[['💬','コメント'],['✉️','メール'],['📌','その他']]
+};
+
+let subQuickConfig=(()=>{
+ try{
+   const saved=JSON.parse(localStorage.getItem(SUB_QUICK_KEY));
+   if(saved && typeof saved==='object') return saved;
+ }catch(e){}
+ const init={};
+ Object.keys(defaultSubGroups).forEach(mainName=>{
+   let q=quickButtons.find(x=>x.name===mainName);
+   if(q){
+     init[q.id]=defaultSubGroups[mainName].map(([emoji,name])=>({
+       emoji,
+       name,
+       subId:ensureProfile("sub",name)
+     }));
+   }
+ });
+ localStorage.setItem(SUB_QUICK_KEY, JSON.stringify(init));
+ return init;
+})();
+function persistSubQuick(){localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(subQuickConfig));}
+
 let lastQuickId=null;
 if(running){
  const found=quickButtons.find(q=>q.id===running.quickId || q.mainId===running.mainId);
@@ -247,40 +285,25 @@ function startQuick(id){
  save(); renderAll();
 }
 
-const SUB_GROUPS={
- '家事':[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り']],
- 'ご飯':[['🍳','料理'],['🥗','食事'],['🧼','片付け']],
- 'お風呂':[['🚿','シャワー'],['🛀','入浴'],['🧴','スキンケア']],
- 'ネーム':[['✍️','プロット'],['📖','ネーム'],['📝','修正']],
- '仕事':[['💻','作業'],['📨','連絡'],['🗂️','整理']],
- 'Twitter':[['𝕏','閲覧'],['💬','コメント'],['📝','投稿']],
- 'イラスト':[['✏️','ラフ'],['🎨','彩色'],['✨','仕上げ']],
- '睡眠':[['🌙','就寝'],['☀️','起床']],
- '返信':[['💬','コメント'],['✉️','メール']]
-};
-
 function renderSubQuick(){
  const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
  if(!q){section.hidden=true;return;}
  section.hidden=false;
- $("subQuickTitle").textContent=`▼ ${q.name} のサブ分類（押すと切り替え）`;
+ $("subQuickTitleschildText"||"subQuickTitle").textContent=`▼ ${q.name} のサブ分類`;
  
- const suggested=SUB_GROUPS[q.name]||[];
- const entries=suggested.map(([emoji,name])=>{
-   let p=profiles.sub.find(x=>x.name===name);
-   if(!p){
-     p={id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name,color:'#4f9be8'};
-     profiles.sub.push(p); save();
-   }
-   return {id:p.id,name:p.name,emoji};
- });
+ if(!subQuickConfig[q.id]){
+   subQuickConfig[q.id]=[{emoji:"📌",name:"その他",subId:ensureProfile("sub","その他")}];
+ }
+ const entries=subQuickConfig[q.id];
 
- $("subQuickGrid").innerHTML=entries.map(p=>`
-   <button class="subquick-btn ${running && running.subId===p.id?'active':''}" data-subquick="${p.id}">
-     <span class="subquick-emoji">${p.emoji}</span>
-     <span class="subquick-name">${esc(p.name)}</span>
-   </button>
- `).join('');
+ $("subQuickGrid").innerHTML=entries.map(item=>{
+   let p=getP("sub",item.subId);
+   let dispName=item.name || p?.name || "項目";
+   return `<button class="subquick-btn ${running && running.subId===item.subId?'active':''}" data-subquick="${item.subId}">
+     <span class="subquick-emoji">${esc(item.emoji||'📌')}</span>
+     <span class="subquick-name">${esc(dispName)}</span>
+   </button>`;
+ }).join('');
 
  $("subQuickGrid").querySelectorAll('[data-subquick]').forEach(el=>{
    el.onclick=()=>{
@@ -298,7 +321,6 @@ function renderSubQuick(){
 
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>{
-   // 【完全修正】現在実行中で、かつ保存されている quickId が一致しているボタン「だけ」を光らせます
    let isActive = false;
    if(running && running.quickId && running.quickId === q.id) {
      isActive = true;
@@ -456,6 +478,43 @@ function openQuickSettings(){
 function saveQuickSettings(){persistQuick(); $("quickDialog").close(); renderAll();}
 function addQuickRow(){quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});openQuickSettings();}
 
+function openSubQuickSettings(){
+ const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
+ if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
+ const list=subQuickConfig[q.id];
+ 
+ $("subQuickRows").innerHTML=list.map((item,i)=>{
+   let subOptions=profiles.sub.map(s=>`<option value="${s.id}" ${s.id===item.subId?'selected':''}>${esc(s.name)}</option>`).join("");
+   return `<div class="quick-editor">
+     <label>サブボタン ${i+1}</label>
+     <div class="row">
+       <input style="width:70px" data-sub-i="${i}" data-sub-k="emoji" value="${escAttr(item.emoji)}">
+       <select style="flex:1" data-sub-i="${i}" data-sub-k="subId">${subOptions}</select>
+     </div>
+   </div>`;
+ }).join("");
+
+ $("subQuickRows").querySelectorAll("input, select").forEach(el=>{
+   el.onchange=()=>{
+     const idx=+el.dataset.subi, k=el.dataset.subk;
+     subQuickConfig[q.id][idx][k]=el.value;
+     if(k==='subId'){
+       let foundSub=profiles.sub.find(s=>s.id===el.value);
+       if(foundSub) subQuickConfig[q.id][idx].name=foundSub.name;
+     }
+   };
+ });
+ $("subQuickDialog").showModal();
+}
+function saveSubQuickSettings(){persistSubQuick(); $("subQuickDialog").close(); renderAll();}
+function addSubQuickRow(){
+ const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
+ if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
+ let firstSub=profiles.sub[0]?.id||"";
+ subQuickConfig[q.id].push({emoji:"📌",name:profiles.sub[0]?.name||"その他",subId:firstSub});
+ openSubQuickSettings();
+}
+
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function escAttr(s){return esc(s)}
 
@@ -470,6 +529,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=7");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=8");
 </script>
 </body></html>
