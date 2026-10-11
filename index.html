@@ -230,7 +230,7 @@ function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButto
 
 let lastQuickId=null;
 if(running){
- const found=quickButtons.find(q=>q.mainId===running.mainId);
+ const found=quickButtons.find(q=>q.id===running.quickId || q.mainId===running.mainId);
  if(found) lastQuickId=found.id;
 }
 
@@ -241,7 +241,7 @@ function startQuick(id){
  if(running && now>running.start){
    logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
  }
- running={start:now,mainId:q.mainId,subId:q.subId||"",memo:""};
+ running={start:now,mainId:q.mainId,subId:q.subId||"",quickId:q.id,memo:""};
  selectedMain=q.mainId; selectedSub=q.subId||""; pendingId=null;
  $("afterStop").style.display="none";
  save(); renderAll();
@@ -288,7 +288,7 @@ function renderSubQuick(){
      if(running && now>running.start){
        logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
      }
-     running={start:now,mainId:q.mainId,subId:el.dataset.subquick,memo:""};
+     running={start:now,mainId:q.mainId,subId:el.dataset.subquick,quickId:q.id,memo:""};
      selectedMain=q.mainId; selectedSub=el.dataset.subquick; pendingId=null;
      $("afterStop").style.display="none";
      save(); renderAll();
@@ -297,23 +297,11 @@ function renderSubQuick(){
 }
 
 function renderQuick(){
- $("quickGrid").innerHTML=quickButtons.map(q=>`
-   <button class="quick-btn ${running && running.mainId===q.mainId && (!q.subId || running.subId===q.subId || (q.name==="家事" && running.mainId===q.mainId)) ? 'active':''}" data-quick="${q.id}">
-     <span class="quick-emoji">${esc(q.emoji||'●')}</span>
-     <span class="quick-name">${esc(q.name)}</span>
-   </button>
- `).join("");
- // 修正：現在実行中のメインIDが一致しており、かつサブが「指定なし」または「今回のメインのデフォルトサブ」のときだけに絞るため、判定を厳密にします
  $("quickGrid").innerHTML=quickButtons.map(q=>{
    let isActive = false;
-   if(running && running.mainId === q.mainId) {
-     if(!q.subId || q.subId === running.subId) isActive = true;
-     // 家事やご飯などで、親ボタン自体をアクティブにする条件
-     if(q.name === "家事" && running.mainId === q.mainId) isActive = true;
-     if(q.name === "ご飯" && running.mainId === q.mainId) isActive = true;
-     if(q.name === "お風呂" && running.mainId === q.mainId) isActive = true;
-     if(q.name === "ネーム" && running.mainId === q.mainId) isActive = true;
-     if(q.name === "睡眠" && running.mainId === q.mainId) isActive = true;
+   if(running) {
+     if(running.quickId && running.quickId === q.id) isActive = true;
+     else if(!running.quickId && running.mainId === q.mainId && (!q.subId || q.subId === running.subId)) isActive = true;
    }
    return `<button class="quick-btn ${isActive ? 'active':''}" data-quick="${q.id}">
      <span class="quick-emoji">${esc(q.emoji||'●')}</span>
