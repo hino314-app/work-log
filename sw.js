@@ -1,4 +1,4 @@
-const CACHE="time-block-quick-v24";
+const CACHE="time-block-quick-v28";
 const ASSETS=["./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil((async()=>{await Promise.all((await caches.keys()).filter(k=>k.startsWith('time-block-quick-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));

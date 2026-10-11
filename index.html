@@ -71,7 +71,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <body>
 <div class="app">
 <header>
-  <h1>時間の塊 <span class="version-tag">v24</span></h1>
+  <h1>時間の塊 <span class="version-tag">v28</span></h1>
   <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
 </header>
 
@@ -298,6 +298,93 @@ for(const q of quickButtons){
 }
 persistQuick();
 
+// v28: transactional one-time migration. The pre-migration snapshot is retained.
+const MAC_LAYOUT_V28=[
+ ['ご飯','🍚','生活','ご飯'],['お風呂','🛁','生活','お風呂'],
+ ['ネーム','✍️','漫画','ネーム'],['仕事','💻','仕事',''],
+ ['Twitter','𝕏','青木さん','Twitter'],['イラスト','🎨','漫画','イラスト'],
+ ['睡眠','🌙','生活','睡眠'],['家事','🧹','生活','家事'],
+ ['返信','💬','仕事','返信'],['青木さん','💙','青木さん','']
+];
+const V28_MIGRATION='work_mac_layout_v28_applied';
+const V28_BACKUP='work_layout_backup_before_v28';
+const V28_PENDING='work_mac_layout_v28_pending';
+function restoreV28Backup(backup){
+ if(backup.raw.quick===null)localStorage.removeItem(QUICK_KEY);else localStorage.setItem(QUICK_KEY,backup.raw.quick);
+ if(backup.raw.sub===null)localStorage.removeItem(SUB_QUICK_KEY);else localStorage.setItem(SUB_QUICK_KEY,backup.raw.sub);
+ if(backup.raw.profiles===null)localStorage.removeItem(PROFILE_KEY);else localStorage.setItem(PROFILE_KEY,backup.raw.profiles);
+}
+if(localStorage.getItem(V28_MIGRATION)!=='yes'){
+ try{
+  const previous=quickButtons.map(q=>({...q}));
+  const rawSub=localStorage.getItem(SUB_QUICK_KEY);
+  const oldSub=rawSub===null?{}:JSON.parse(rawSub);
+  if(!oldSub || typeof oldSub!=='object' || Array.isArray(oldSub))throw Error('Invalid sub settings');
+  const existingBackup=localStorage.getItem(V28_BACKUP);
+  const backup=existingBackup?JSON.parse(existingBackup):{
+   raw:{quick:localStorage.getItem(QUICK_KEY),sub:rawSub,profiles:localStorage.getItem(PROFILE_KEY)},
+   version:localStorage.getItem('work_mac_layout_v27_applied')
+  };
+  if(!existingBackup)localStorage.setItem(V28_BACKUP,JSON.stringify(backup));
+  // Recover from a previous interrupted attempt before retrying.
+  if(localStorage.getItem(V28_PENDING)==='yes'){
+   restoreV28Backup(backup);
+   quickButtons=JSON.parse(localStorage.getItem(QUICK_KEY)||'[]');
+   profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null')||defaultProfiles;
+  }
+  localStorage.setItem(V28_PENDING,'yes');
+  const source=quickButtons.map(q=>({...q}));
+  const next=MAC_LAYOUT_V28.map(([name,emoji,mainName,subName],i)=>{
+   const old=source.find(q=>q.name===name);
+   return {id:old?.id||'mac_v28_'+i,name,emoji,
+    mainId:ensureProfile('main',mainName),subId:subName?ensureProfile('sub',subName):''};
+  });
+  const nextSub={...oldSub};
+  for(const q of next){
+   if(!Array.isArray(nextSub[q.id])){
+    const old=source.find(x=>x.name===q.name && Array.isArray(oldSub[x.id]));
+    nextSub[q.id]=old?oldSub[old.id].map(s=>({...s})):[];
+   }
+  }
+  // Keep every legacy subcategory reachable, including groups whose main
+  // quick button (such as 生活 or 遊び) is no longer displayed.
+  const targetForSub=name=>{
+   if(/風呂|シャワー|入浴|スキンケア|洗面/.test(name))return 'お風呂';
+   if(/ご飯|食事|料理|朝食|昼食|夕食|片付け/.test(name))return 'ご飯';
+   if(/寝|睡眠|起床/.test(name))return '睡眠';
+   if(/ネーム|プロット|原稿/.test(name))return 'ネーム';
+   if(/イラスト|ラフ|彩色|仕上げ/.test(name))return 'イラスト';
+   if(/Twitter|ツイート|閲覧|投稿/.test(name))return 'Twitter';
+   if(/返信|メール|コメント/.test(name))return '返信';
+   if(/仕事|作業|連絡/.test(name))return '仕事';
+   return '家事';
+  };
+  const keptIds=new Set(next.map(q=>q.id));
+  for(const old of source){
+   if(keptIds.has(old.id) || !Array.isArray(oldSub[old.id]))continue;
+   for(const entry of oldSub[old.id]){
+    if(!entry || typeof entry.name!=='string' || !entry.name.trim())continue;
+    const dest=next.find(q=>q.name===targetForSub(entry.name));
+    if(!dest)continue;
+    const items=nextSub[dest.id];
+    if(!items.some(s=>s.name===entry.name))items.push({...entry});
+   }
+  }
+  localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(nextSub));
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+  localStorage.setItem(QUICK_KEY,JSON.stringify(next));
+  quickButtons=next;
+  localStorage.setItem(V28_MIGRATION,'yes');
+  localStorage.removeItem(V28_PENDING);
+ }catch(error){
+  console.error('v28 migration failed',error);
+  try{
+   const backup=JSON.parse(localStorage.getItem(V28_BACKUP)||'null');
+   if(backup?.raw){restoreV28Backup(backup);quickButtons=JSON.parse(localStorage.getItem(QUICK_KEY)||'[]');profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null')||defaultProfiles;}
+   localStorage.removeItem(V28_PENDING);
+  }catch(restoreError){console.error('v28 restore failed',restoreError)}
+ }
+}
 
 const SUB_GROUPS={
  '家事':[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り']],
@@ -329,6 +416,13 @@ let subQuickConfig=(()=>{
  localStorage.setItem(SUB_QUICK_KEY, JSON.stringify(init));
  return init;
 })();
+// Only seed missing group configurations; retain all user-edited sub groups.
+for(const q of quickButtons){
+ if(!Array.isArray(subQuickConfig[q.id])){
+   subQuickConfig[q.id]=(SUB_GROUPS[q.name]||[]).map(([emoji,name])=>({emoji,name}));
+ }
+}
+localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(subQuickConfig));
 function persistSubQuick(){localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(subQuickConfig));}
 
 let lastQuickId=null;
@@ -629,7 +723,7 @@ renderAll();
 if("serviceWorker" in navigator) {
  let swReloaded=false;
  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!swReloaded){swReloaded=true;window.location.reload();}});
-  navigator.serviceWorker.register("./sw.js?v=24").then(reg => {
+  navigator.serviceWorker.register("./sw.js?v=28").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {
