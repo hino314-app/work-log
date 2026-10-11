@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f3ee">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>時間の塊</title>
+<style>
+:root{--bg:#f7f3ee;--card:#fffaf4;--text:#2c2520;--muted:#7b6d62;--line:#eadfd3;--danger:#b94b4b;--shadow:0 10px 30px rgba(67,48,32,.10)}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:linear-gradient(180deg,#fbf7f2,#f1e8df);color:var(--text);min-height:100vh}
+button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:8px 8px 60px}header{padding:3px 4px 7px}h1{margin:0;font-size:22px}.sub,.hint,.meta{color:var(--muted);font-size:12px;line-height:1.4}.card{background:rgba(255,250,244,.96);border:1px solid var(--line);border-radius:18px;padding:11px;box-shadow:var(--shadow);margin-bottom:10px}
+.now{text-align:center}.status{font-size:13px;color:var(--muted)}.timer{font-variant-numeric:tabular-nums;font-size:35px;font-weight:850;letter-spacing:.03em;margin:3px 0 7px}
+.picker-title{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:8px 0 5px}.picker-title b{font-size:13px}.picker-title .row{justify-content:flex-end;gap:5px}
+.chips{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 5px;padding:4px 0 7px;overflow:visible}
+.chip{min-width:0;width:100%;border:0;background:transparent;padding:0;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px}
+.color-disc{width:39px;height:39px;border-radius:10px;border:3px solid transparent;box-shadow:0 3px 8px rgba(0,0,0,.13)}
+.chip.sub .color-disc{width:35px;height:35px;border-radius:9px}
+.chip.selected .color-disc{border-color:#2c2520;box-shadow:0 0 0 2px white,0 4px 10px rgba(0,0,0,.2);transform:scale(1.04)}
+.chip-label{width:100%;font-size:10px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+.bigbtn{width:100%;border:0;border-radius:17px;padding:14px 12px;font-size:22px;font-weight:900;color:white;box-shadow:0 8px 16px rgba(50,38,28,.18);margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,.25)}.bigbtn:active{transform:scale(.99)}
+.selection-preview{display:flex;align-items:center;gap:8px;margin:3px 0;padding:7px 9px;border-radius:12px;background:white;border:1px solid var(--line);text-align:left}
+.preview-main{width:18px;height:42px;border-radius:7px}
+.preview-sub{width:8px;height:42px;border-radius:5px}
+.preview-text{font-weight:850}.preview-subtext{font-size:13px;color:var(--muted);margin-top:2px}
+.smallbtn{border:1px solid var(--line);background:white;border-radius:11px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:750;cursor:pointer}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
+label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,select{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:13px;padding:12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{position:relative;height:42px;border-radius:13px;overflow:hidden;background:#f3ece5;border:1px solid var(--line)}.hour-guide{position:absolute;top:0;bottom:0;width:1px;background:rgba(90,75,65,.10);pointer-events:none}.seg{position:absolute;top:0;height:100%;min-width:1px;border:0;padding:0 2px;display:flex;align-items:center;justify-content:center;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;cursor:pointer}
+.filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px}.filter{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:white;padding:7px 10px}.filter.active{outline:2px solid #2c2520}
+.log{border-top:1px solid var(--line);padding:12px 0}.log:first-child{border-top:0}.log-main{display:flex;gap:10px}.swatches{display:flex;gap:3px;padding-top:3px}.swatch{width:15px;height:21px;border-radius:5px}.log-title{font-weight:850}.actions{display:flex;gap:7px;margin-top:8px}.empty{text-align:center;color:var(--muted);padding:20px 6px}
+dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.profile-list{display:grid;gap:8px}.profile-row{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center}.profile-row input[type=color]{height:44px;padding:3px}
+.install{padding:11px;border-radius:14px;background:#fff;border:1px dashed var(--line);margin-top:12px;text-align:left}
+
+@media (max-width:390px){
+  .chips{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px 3px}
+  .color-disc{width:36px;height:36px}
+  .chip.sub .color-disc{width:33px;height:33px}
+  .picker-title b{font-size:12px}
+  .picker-title .smallbtn{padding:6px 7px;font-size:11px}
+  header .sub{display:none}
+}
+
+.timeline-scale{display:flex;justify-content:space-between;margin:2px 1px 0;color:var(--muted);font-size:10px}
+
+/* One-tap dashboard */
+.subquick-title{font-weight:800;text-align:left;margin:12px 0 8px;font-size:13px;color:var(--muted)}
+.subquick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}
+.subquick-btn{border:1px solid #eaded5;border-radius:12px;background:#fff9f5;min-height:68px;padding:6px 4px;font-weight:750;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.subquick-btn.active{outline:2px solid #b94377;background:#fce8f0}
+.subquick-emoji{font-size:21px}
+.subquick-name{font-size:11px;overflow-wrap:anywhere;text-align:center}
+
+.quick-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}
+.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.quick-btn{border:1px solid #eaded5;border-radius:17px;min-height:105px;padding:8px 4px;background:#fcf7f2;color:#302923;font-weight:850;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;box-shadow:0 3px 10px #382b2508;cursor:pointer}
+.quick-btn.active{outline:3px solid #b94377;outline-offset:1px;background:#fce8f0}
+.quick-emoji{font-size:30px;line-height:1.1}
+.quick-name{font-size:14px;overflow-wrap:anywhere;text-align:center}
+.quick-actions{display:flex;gap:8px;margin-top:12px}
+.quick-actions button{flex:1;padding:12px}
+.quick-stop{background:#fff4f5!important}
+.quick-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.quick-editor label{display:block;font-size:12px;margin:7px 0 3px}
+.quick-editor input,.quick-editor select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}
+</style>
+</head>
+<body>
+<div class="app">
+<header><h1>時間の塊</h1><div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div></header>
+
+<section class="card now" id="quickCard">
+<div class="status" id="quickStatus">今の記録</div>
+<div class="timer" id="quickTimer">00:00:00</div>
+<div class="quick-title"><b>よく使う項目</b><button class="smallbtn" onclick="openQuickSettings()">⚙ カスタマイズ</button></div>
+
+<!-- 3列のメインボタン -->
+<div class="quick-grid" id="quickGrid"></div>
+
+<!-- 選択中のメインに対応するサブ（4列表示） -->
+<div id="subQuickSection" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;" hidden>
+  <div class="subquick-title" id="subQuickTitle">サブ分類</div>
+  <div class="subquick-grid" id="subQuickGrid"></div>
+</div>
+
+<div class="quick-actions">
+  <button class="smallbtn quick-stop" id="quickStop">■ 計測を停止</button>
+  <button class="smallbtn" id="quickLatest">直前を編集</button>
+</div>
+
+<details style="text-align:left;margin-top:14px"><summary>その他の項目・従来の色選択</summary>
+<div class="picker-title"><b>メイン色</b><button class="smallbtn" onclick="openProfiles('main')">＋ 色を追加・編集</button></div>
+  <div class="chips" id="mainPicker"></div>
+  <div class="picker-title"><b>サブ色（同じ色をもう一度押すと解除）</b><button class="smallbtn" onclick="openProfiles('sub')">＋ 色を追加・編集</button></div>
+  <div class="chips" id="subPicker"></div>
+  <div class="selection-preview">
+    <div class="preview-main" id="previewMain"></div>
+    <div class="preview-sub" id="previewSub"></div>
+    <div>
+      <div class="preview-text" id="previewText">青木さん</div>
+      <div class="preview-subtext" id="previewSubText">サブなし</div>
+    </div>
+  </div>
+  <button class="bigbtn" id="mainBtn">▶ スタート</button>
+  <div id="afterStop" style="display:none;text-align:left;margin-top:14px">
+    <label>あとから内訳を書く（空欄でもOK）</label>
+    <input id="memoInput" placeholder="例：映画、コメント、Twitterの文章">
+    <div class="row" style="margin-top:9px"><button class="smallbtn" id="saveMemoBtn">保存</button><button class="smallbtn" id="skipMemoBtn">未入力で保存</button></div>
+  </div>
+</details>
+<details class="install"><summary><b>ホーム画面への置き方</b></summary><div class="hint">Safariの共有ボタンから「ホーム画面に追加」。</div></details>
+</section>
+
+<section class="card">
+  <div class="section-title"><h2>今日の時間バー</h2><button class="smallbtn danger" id="clearBtn">今日を全削除</button></div>
+  <div class="timeline-scale"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
+  <div class="timeline-label"><span>メイン</span><span id="mainTotal"></span></div><div class="timeline" id="mainTimeline"></div>
+  <div class="timeline-label"><span>サブ</span><span id="subTotal"></span></div><div class="timeline" id="subTimeline"></div>
+  <p class="hint">横幅全体が今日の24時間です。何も記録していない時間は空欄になります。色の部分をタップすると編集できます。</p>
+</section>
+
+<section class="card">
+  <div class="section-title"><h2>絞り込み</h2><button class="smallbtn" onclick="setFilter('all','all')">すべて表示</button></div>
+  <div class="picker-title"><b>メイン別</b></div><div class="filters" id="mainFilters"></div>
+  <div class="picker-title"><b>サブ別</b></div><div class="filters" id="subFilters"></div>
+</section>
+
+<section class="card"><div class="section-title"><h2>今日の履歴</h2><button class="smallbtn" id="editLatestBtn">直前を編集</button></div><div id="logs"></div></section>
+</div>
+
+<dialog id="editDialog"><div class="dialog-inner">
+<h2>記録を編集</h2>
+<label>内訳・メモ</label><input id="editMemo">
+<label>開始</label><input id="editStart" type="datetime-local">
+<label>終了</label><input id="editEnd" type="datetime-local">
+<label>メイン</label><select id="editMain"></select>
+<label>サブ</label><select id="editSub"></select>
+<div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('editDialog').close()">閉じる</button><button class="smallbtn" id="saveEdit">保存</button></div>
+</div></dialog>
+
+<dialog id="profilesDialog"><div class="dialog-inner">
+<h2 id="profilesTitle">色・名前を編集</h2>
+<div class="profile-list" id="profileList"></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" id="addProfile">＋ 新しい色を追加</button></div>
+<div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('profilesDialog').close()">閉じる</button><button class="smallbtn" id="saveProfiles">保存</button></div>
+</div></dialog>
+
+<dialog id="quickDialog"><div class="dialog-inner"><h2>よく使う項目の設定</h2><p class="hint">表示するボタンを編集できます。</p><div id="quickRows"></div><button class="smallbtn" onclick="addQuickRow()">＋ ボタンを追加</button><div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveQuickSettings()">保存</button></div></div></dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1";
+
+const defaultProfiles={
+ main:[
+  {id:"blue",name:"青木さん",color:"#3777c8"},
+  {id:"green",name:"漫画",color:"#3f9863"},
+  {id:"orange",name:"仕事",color:"#d88738"},
+  {id:"pink",name:"生活",color:"#c85e89"}
+ ],
+ sub:[
+  {id:"twitter",name:"Twitter",color:"#4f9be8"},
+  {id:"movie",name:"映画",color:"#7459b8"},
+  {id:"comment",name:"コメント",color:"#d05a79"},
+  {id:"sleep",name:"寝起き",color:"#7893a8"}
+ ]
+};
+let profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")||defaultProfiles;
+
+let logs=JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
+let running=JSON.parse(localStorage.getItem(RUN_KEY)||"null");
+let selectedMain=profiles.main[0]?.id||"", selectedSub="", pendingId=null, editId=null, profileMode="main", filterMain="all", filterSub="all";
+
+const pad=n=>String(n).padStart(2,"0");
+const todayKey=(ts=Date.now())=>{let d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const fmtTime=ts=>{let d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fmtDur=ms=>{
+ let s=Math.max(0,Math.floor(ms/1000));
+ let h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+ if(h)return `${h}時間${m}分${sec}秒`;
+ if(m)return `${m}分${sec}秒`;
+ return `${sec}秒`;
+};
+const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
+const toLocal=ts=>{const d=new Date(ts);const local=new Date(ts-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)};
+const fromLocal=v=>new Date(v).getTime();
+const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
+function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
+
+const quickDefaults=[
+ {emoji:"🍚",name:"ご飯",mainName:"生活",subName:"ご飯"},
+ {emoji:"🛁",name:"お風呂",mainName:"生活",subName:"お風呂"},
+ {emoji:"✍️",name:"ネーム",mainName:"漫画",subName:"ネーム"},
+ {emoji:"💻",name:"仕事",mainName:"仕事",subName:""},
+ {emoji:"𝕏",name:"Twitter",mainName:"青木さん",subName:"Twitter"},
+ {emoji:"🎨",name:"イラスト",mainName:"漫画",subName:"イラスト"},
+ {emoji:"🌙",name:"睡眠",mainName:"生活",subName:"睡眠"},
+ {emoji:"🧹",name:"家事",mainName:"生活",subName:"家事"},
+ {emoji:"💬",name:"返信",mainName:"仕事",subName:"返信"}
+];
+
+function ensureProfile(kind,name){
+ if(!name)return "";
+ let p=profiles[kind].find(x=>x.name===name);
+ if(!p){
+   p={id:"auto_"+kind+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),name,color:kind==="main"?"#c85e89":"#4f9be8"};
+   profiles[kind].push(p);
+ }
+ return p.id;
+}
+
+let quickButtons=(()=>{
+ try{
+   const saved=JSON.parse(localStorage.getItem(QUICK_KEY));
+   if(Array.isArray(saved) && saved.length>0) return saved;
+ }catch(e){}
+ const defs=quickDefaults.map((q,i)=>({
+   id:"default_"+i,
+   emoji:q.emoji,
+   name:q.name,
+   mainId:ensureProfile("main",q.mainName),
+   subId:ensureProfile("sub",q.subName)
+ }));
+ localStorage.setItem(QUICK_KEY, JSON.stringify(defs));
+ return defs;
+})();
+function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons))}
+
+let lastQuickId=null;
+if(running){
+ const found=quickButtons.find(q=>q.mainId===running.mainId);
+ if(found) lastQuickId=found.id;
+}
+
+function startQuick(id){
+ const q=quickButtons.find(x=>x.id===id); if(!q) return;
+ lastQuickId=id;
+ const now=Date.now();
+ if(running && now>running.start){
+   logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
+ }
+ running={start:now,mainId:q.mainId,subId:q.subId||"",memo:""};
+ selectedMain=q.mainId; selectedSub=q.subId||""; pendingId=null;
+ $("afterStop").style.display="none";
+ save(); renderAll();
+}
+
+const SUB_GROUPS={
+ '家事':[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り']],
+ 'ご飯':[['🍳','料理'],['🥗','食事'],['🧼','片付け']],
+ 'お風呂':[['🚿','シャワー'],['🛀','入浴'],['🧴','スキンケア']],
+ 'ネーム':[['✍️','プロット'],['📖','ネーム'],['📝','修正']],
+ '仕事':[['💻','作業'],['📨','連絡'],['🗂️','整理']],
+ 'Twitter':[['𝕏','閲覧'],['💬','コメント'],['📝','投稿']],
+ 'イラスト':[['✏️','ラフ'],['🎨','彩色'],['✨','仕上げ']],
+ '睡眠':[['🌙','就寝'],['☀️','起床']],
+ '返信':[['💬','コメント'],['✉️','メール']]
+};
+
+function renderSubQuick(){
+ const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
+ if(!q){section.hidden=true;return;}
+ section.hidden=false;
+ $("subQuickTitle").textContent=`▼ ${q.name} のサブ分類（押すと切り替え）`;
+ 
+ const suggested=SUB_GROUPS[q.name]||[];
+ const entries=suggested.map(([emoji,name])=>{
+   let p=profiles.sub.find(x=>x.name===name);
+   if(!p){
+     p={id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name,color:'#4f9be8'};
+     profiles.sub.push(p); save();
+   }
+   return {id:p.id,name:p.name,emoji};
+ });
+
+ $("subQuickGrid").innerHTML=entries.map(p=>`
+   <button class="subquick-btn ${running && running.subId===p.id?'active':''}" data-subquick="${p.id}">
+     <span class="subquick-emoji">${p.emoji}</span>
+     <span class="subquick-name">${esc(p.name)}</span>
+   </button>
+ `).join('');
+
+ $("subQuickGrid").querySelectorAll('[data-subquick]').forEach(el=>{
+   el.onclick=()=>{
+     const now=Date.now();
+     if(running && now>running.start){
+       logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
+     }
+     running={start:now,mainId:q.mainId,subId:el.dataset.subquick,memo:""};
+     selectedMain=q.mainId; selectedSub=el.dataset.subquick; pendingId=null;
+     $("afterStop").style.display="none";
+     save(); renderAll();
+   };
+ });
+}
+
+function renderQuick(){
+ $("quickGrid").innerHTML=quickButtons.map(q=>`
+   <button class="quick-btn ${running && running.mainId===q.mainId && (!q.subId || running.subId===q.subId || (q.name==="家事" && running.mainId===q.mainId)) ? 'active':''}" data-quick="${q.id}">
+     <span class="quick-emoji">${esc(q.emoji||'●')}</span>
+     <span class="quick-name">${esc(q.name)}</span>
+   </button>
+ `).join("");
+ // 修正：現在実行中のメインIDが一致しており、かつサブが「指定なし」または「今回のメインのデフォルトサブ」のときだけに絞るため、判定を厳密にします
+ $("quickGrid").innerHTML=quickButtons.map(q=>{
+   let isActive = false;
+   if(running && running.mainId === q.mainId) {
+     if(!q.subId || q.subId === running.subId) isActive = true;
+     // 家事やご飯などで、親ボタン自体をアクティブにする条件
+     if(q.name === "家事" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "ご飯" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "お風呂" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "ネーム" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "睡眠" && running.mainId === q.mainId) isActive = true;
+   }
+   return `<button class="quick-btn ${isActive ? 'active':''}" data-quick="${q.id}">
+     <span class="quick-emoji">${esc(q.emoji||'●')}</span>
+     <span class="quick-name">${esc(q.name)}</span>
+   </button>`;
+ }).join("");
+
+ $("quickGrid").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>startQuick(el.dataset.quick));
+ 
+ $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
+ $("quickTimer").textContent=running?fmtTimer(Date.now()-running.start):"00:00:00";
+ $("quickStop").disabled=!running;
+ 
+ renderSubQuick();
+}
+
+$("quickStop").onclick=()=>{
+ if(running){
+   const now=Date.now();
+   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   running=null; save(); renderAll();
+ }
+};
+
+$("quickLatest").onclick=()=>{
+ const l=logs.slice().sort((a,b)=>b.end-a.end)[0];
+ if(l) openEdit(l.id); else alert("編集できる記録がありません");
+};
+
+function chipHTML(p,selected,kind){
+ const label=p.name||"名前なし";
+ return `<button class="chip ${kind==="sub"?"sub":""} ${p.id===selected?'selected':''}" data-id="${p.id}"><span class="color-disc" style="background:${p.color}"></span>${p.name?`<span class="chip-label">${esc(p.name)}</span>`:""}</button>`;
+}
+
+function renderPickers(){
+ $("mainPicker").innerHTML=profiles.main.map(p=>chipHTML(p,selectedMain,"main")).join("");
+ $("subPicker").innerHTML=profiles.sub.map(p=>chipHTML(p,selectedSub,"sub")).join("");
+ [...$("mainPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedMain=b.dataset.id;renderAll();}});
+ [...$("subPicker").children].forEach(b=>b.onclick=()=>{selectedSub=selectedSub===b.dataset.id?"":b.dataset.id;if(running){running.subId=selectedSub;save();}renderAll();});
+}
+
+function todayLogs(){return logs.filter(l=>todayKey(l.start)===todayKey()).sort((a,b)=>a.start-b.start)}
+function visibleLogs(){return todayLogs().filter(l=>(filterMain==="all"||l.mainId===filterMain)&&(filterSub==="all"||l.subId===filterSub))}
+
+function renderTimeline(kind){
+ let list=visibleLogs();
+ if(kind==="sub") list=list.filter(l=>l.subId);
+ const box=$(kind+"Timeline");
+ const startMs=new Date().setHours(0,0,0,0), dayMs=86400000;
+ const total=list.reduce((sum,l)=>sum+Math.max(0,Math.min(Number(l.end),startMs+dayMs)-Math.max(Number(l.start),startMs)),0);
+ $(kind+"Total").textContent=total>0?fmtDur(total):"";
+ box.innerHTML=list.map(l=>{
+   const start=Math.max(Number(l.start),startMs), end=Math.min(Number(l.end),startMs+dayMs);
+   const dur=end-start; if(dur<=0) return "";
+   const p=getP(kind,l[kind+"Id"]);
+   return `<button class="seg" onclick="openEdit('${l.id}')" style="left:${(start-startMs)/dayMs*100}%;width:${dur/dayMs*100}%;background:${p?.color||'#ccc'}"></button>`;
+ }).join("");
+}
+
+function renderFilters(){
+ $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
+ $("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
+}
+function setFilter(m,s){if(m!==null)filterMain=m;if(s!==null)filterSub=s;renderAll();}
+
+function renderLogs(){
+ let list=visibleLogs().slice().reverse();
+ if(!list.length){$("logs").innerHTML='<div class="empty">まだ履歴なし</div>';return;}
+ $("logs").innerHTML=list.map(l=>{
+   let m=getP("main",l.mainId), s=getP("sub",l.subId);
+   return `<div class="log" onclick="openEdit('${l.id}')"><div class="log-main"><div class="swatches"><span class="swatch" style="background:${m?.color||'#ccc'}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div><div style="flex:1"><div class="log-title">${esc(m?.name||"名前なし")}${s?` ／ ${esc(s.name)}`:""}</div><div class="meta">${esc(l.memo||"内訳なし")}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}</div></div></div></div>`;
+ }).join("");
+}
+
+function updateRunning(){
+ let p=getP("main",running?.mainId||selectedMain), s=getP("sub",running?.subId||selectedSub);
+ $("previewMain").style.background=p?.color||"#888";
+ $("previewSub").style.background=s?.color||"transparent";
+ $("previewSub").style.opacity=s?1:.15;
+ $("previewText").textContent=p?.name||"未選択";
+ $("previewSubText").textContent=s?`サブ：${s.name}`:"サブなし";
+ $("mainBtn").style.background=p?.color||"#555";
+ if(running){
+   $("mainBtn").textContent="■ ストップ";
+ }else{
+   $("mainBtn").textContent="▶ スタート";
+ }
+}
+
+$("mainBtn").onclick=()=>{
+ if(running){
+   const now=Date.now();
+   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   running=null; save(); renderAll();
+ }else{
+   if(!selectedMain) return;
+   running={start:Date.now(),mainId:selectedMain,subId:selectedSub};
+   save(); renderAll();
+ }
+};
+
+function openEdit(id){
+ let l=logs.find(x=>x.id===id); if(!l) return;
+ editId=id;
+ $("editMemo").value=l.memo||"";
+ $("editStart").value=toLocal(l.start);
+ $("editEnd").value=toLocal(l.end);
+ $("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
+ $("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
+ $("editDialog").showModal();
+}
+$("saveEdit").onclick=()=>{
+ let l=logs.find(x=>x.id===editId);
+ let st=fromLocal($("editStart").value), en=fromLocal($("editEnd").value);
+ if(!l||!Number.isFinite(st)||!Number.isFinite(en)||en<=st){alert("終了は開始より後にしてください");return;}
+ Object.assign(l,{memo:$("editMemo").value.trim(),start:st,end:en,mainId:$("editMain").value,subId:$("editSub").value});
+ save(); $("editDialog").close(); renderAll();
+};
+$("clearBtn").onclick=()=>{if(confirm("今日の記録を全部削除しますか？")){logs=logs.filter(l=>todayKey(l.start)!==todayKey());save();renderAll();}};
+$("editLatestBtn").onclick=()=>{let list=todayLogs();if(list.length)openEdit(list[list.length-1].id);else alert("記録がありません");};
+
+function openProfiles(mode){profileMode=mode;$("profilesTitle").textContent=(mode==="main"?"メイン":"サブ")+"の色・名前を編集";renderProfileRows();$("profilesDialog").showModal();}
+function renderProfileRows(){
+ $("profileList").innerHTML=profiles[profileMode].map((p,i)=>`
+  <div class="profile-row">
+   <input type="color" value="${p.color}" data-i="${i}" data-k="color">
+   <input value="${escAttr(p.name)}" data-i="${i}" data-k="name" placeholder="名前">
+   <button class="smallbtn danger" onclick="profiles['${profileMode}'].splice(${i},1);renderProfileRows();">削除</button>
+  </div>`).join("");
+}
+$("addProfile").onclick=()=>{profiles[profileMode].push({id:'p_'+Date.now(),name:"",color:"#c85e89"});renderProfileRows();};
+$("saveProfiles").onclick=()=>{
+ document.querySelectorAll("#profileList input").forEach(el=>{profiles[profileMode][+el.dataset.i][el.dataset.k]=el.value;});
+ save(); $("profilesDialog").close(); renderAll();
+};
+
+function openQuickSettings(){
+ $("quickRows").innerHTML=quickButtons.map((q,i)=>`
+   <div class="quick-editor">
+     <label>ボタン ${i+1}（絵文字 / 名前）</label>
+     <div class="row">
+       <input style="width:70px" data-i="${i}" data-k="emoji" value="${escAttr(q.emoji)}">
+       <input style="flex:1" data-i="${i}" data-k="name" value="${escAttr(q.name)}">
+     </div>
+   </div>
+ `).join("");
+ $("quickRows").querySelectorAll("input").forEach(el=>{
+   el.onchange=()=>quickButtons[+el.dataset.i][el.dataset.k]=el.value;
+ });
+ $("quickDialog").showModal();
+}
+function saveQuickSettings(){persistQuick(); $("quickDialog").close(); renderAll();}
+function addQuickRow(){quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});openQuickSettings();}
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function escAttr(s){return esc(s)}
+
+function renderAll(){
+ renderPickers(); renderFilters(); renderTimeline("main"); renderTimeline("sub"); renderLogs(); updateRunning(); renderQuick();
+}
+
+setInterval(()=>{
+ const elapsed=running?Date.now()-Number(running.start):0;
+ $("quickTimer").textContent=fmtTimer(elapsed);
+ $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
+},250);
+
+renderAll();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=5");
+</script>
+</body></html>

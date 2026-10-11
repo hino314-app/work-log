@@ -154,16 +154,16 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <h2>よく使う項目（メイン）のカスタマイズ</h2>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="quickRows"></div>
-<div class="row" style="margin-top:12px"><button class="smallbtn" onclick="addQuickRow()">＋ ボタンを追加</button></div>
-<div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveQuickSettings()">保存</button></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" type="button" onclick="addQuickRow()">＋ ボタンを追加</button></div>
+<div class="dialog-actions"><button class="smallbtn" type="button" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" type="button" id="saveQuickBtn">保存</button></div>
 </div></dialog>
 
 <dialog id="subQuickDialog"><div class="dialog-inner">
 <h2>サブ項目のカスタマイズ</h2>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="subQuickRows"></div>
-<div class="row" style="margin-top:12px"><button class="smallbtn" onclick="addSubQuickRow()">＋ サブボタンを追加</button></div>
-<div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('subQuickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveSubQuickSettings()">保存</button></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" type="button" onclick="addSubQuickRow()">＋ サブボタンを追加</button></div>
+<div class="dialog-actions"><button class="smallbtn" type="button" onclick="document.getElementById('subQuickDialog').close()">閉じる</button><button class="smallbtn" type="button" id="saveSubQuickBtn">保存</button></div>
 </div></dialog>
 
 <script>
@@ -469,7 +469,7 @@ function renderProfileRows(){
   <div class="profile-row">
    <input type="color" value="${p.color}" data-i="${i}" data-k="color">
    <input value="${escAttr(p.name)}" data-i="${i}" data-k="name" placeholder="名前">
-   <button class="smallbtn danger" onclick="profiles['${profileMode}'].splice(${i},1);renderProfileRows();">削除</button>
+   <button class="smallbtn danger" type="button" onclick="profiles['${profileMode}'].splice(${i},1);renderProfileRows();">削除</button>
   </div>`).join("");
 }
 $("addProfile").onclick=()=>{profiles[profileMode].push({id:'p_'+Date.now(),name:"",color:"#c85e89"});renderProfileRows();};
@@ -497,19 +497,19 @@ function renderQuickRows(){
  `).join("");
 
  $("quickRows").querySelectorAll("input").forEach(el=>{
-   el.onchange=()=>{
+   el.oninput=el.onchange=()=>{
      const idx=+el.dataset.quickI, k=el.dataset.quickK;
      quickButtons[idx][k]=el.value;
    };
  });
 }
-function saveQuickSettings(){
+$("saveQuickBtn").onclick=()=>{
  persistQuick();
  $("quickDialog").close();
  renderAll();
-}
+};
 function addQuickRow(){
- quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});
+ quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'',mainId:profiles.main[0].id,subId:''});
  renderQuickRows();
 }
 
@@ -537,21 +537,29 @@ function renderSubQuickRows(){
  `).join("");
 
  $("subQuickRows").querySelectorAll("input").forEach(el=>{
-   el.onchange=()=>{
+   el.oninput=el.onchange=()=>{
      const idx=+el.dataset.subi, k=el.dataset.subk;
      subQuickConfig[q.id][idx][k]=el.value;
    };
  });
 }
-function saveSubQuickSettings(){
+$("saveSubQuickBtn").onclick=()=>{
+ const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  persistSubQuick();
+ // サブで追加された名前をprofiles.subにも自動登録
+ subQuickConfig[q.id].forEach(item=>{
+   if(item.name && !profiles.sub.find(s=>s.name===item.name)){
+     profiles.sub.push({id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name:item.name,color:"#4f9be8"});
+   }
+ });
+ save();
  $("subQuickDialog").close();
  renderAll();
-}
+};
 function addSubQuickRow(){
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
- subQuickConfig[q.id].push({emoji:"📌",name:"新規項目"});
+ subQuickConfig[q.id].push({emoji:"📌",name:""});
  renderSubQuickRows();
 }
 
@@ -569,6 +577,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=14");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=16");
 </script>
 </body></html>
