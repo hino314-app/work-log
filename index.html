@@ -320,6 +320,8 @@ $("saveEdit").onclick=()=>{
  let l=logs.find(x=>x.id===editId);
  let st=fromLocal($("editStart").value);
  let en=fromLocal($("editEnd").value);
+ let mainId = $("editMain").value;
+ let subId = $("editSub").value;
  if(!l||!Number.isFinite(st)||!Number.isFinite(en)||en<=st){
    alert("終了は開始より後にしてください");
    return;
@@ -328,8 +330,8 @@ $("saveEdit").onclick=()=>{
    memo:$("editMemo").value.trim(),
    start:st,
    end:en,
-   mainId:$("editMain").value,
-   subId:$("editSub").value
+   mainId:mainId,
+   subId:subId
  });
  save();
  $("editDialog").close();
@@ -394,7 +396,15 @@ function ensureQuickProfile(kind,name){
  if(!p){p={id:"quick_"+kind+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),name,color:kind==="main"?"#a49a94":"#89b8bb"};profiles[kind].push(p)}
  return p.id;
 }
-let quickButtons=(()=>{try{const saved=JSON.parse(localStorage.getItem(QUICK_KEY));if(Array.isArray(saved))return saved}catch(e){}return quickDefaults.map((q,i)=>({id:"default_"+i,emoji:q.emoji,name:q.name,mainId:ensureQuickProfile("main",q.mainName),subId:ensureQuickProfile("sub",q.subName)}))})();
+let quickButtons=(()=>{
+ try{
+   const saved=JSON.parse(localStorage.getItem(QUICK_KEY));
+   if(Array.isArray(saved) && saved.length>0) return saved;
+ }catch(e){}
+ const defs=quickDefaults.map((q,i)=>({id:"default_"+i,emoji:q.emoji,name:q.name,mainId:ensureQuickProfile("main",q.mainName),subId:ensureQuickProfile("sub",q.subName)}));
+ localStorage.setItem(QUICK_KEY, JSON.stringify(defs));
+ return defs;
+})();
 function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons))}
 function startQuick(id){
  const q=quickButtons.find(q=>q.id===id);if(!q)return;lastQuickId=id;
@@ -417,6 +427,13 @@ const SUB_GROUPS={
  '返信':[['💬','コメント'],['✉️','メール']]
 };
 let lastQuickId=null;
+
+// If a running timer exists, automatically select its corresponding quick button so sub buttons appear immediately
+if(running){
+ const found=quickButtons.find(q=>q.mainId===running.mainId && (q.subId===running.subId || (!q.subId && !running.subId)));
+ if(found) lastQuickId=found.id;
+}
+
 function renderSubQuick(){
  const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
  if(!q){section.hidden=true;return}
