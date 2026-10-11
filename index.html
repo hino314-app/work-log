@@ -291,7 +291,7 @@ function updateRunning(){
  $("previewSubText").textContent=s?`サブ：${s.name}`:"サブなし";
  $("mainBtn").style.background=p?.color||"#555";
  if(running){
-   $("status").textContent=`計測中：${p?.name||"名前なし"}　${fmtTime(running.start)}開始`;
+   $("status").textContent=`計測中：${p?.name||"名前なし"} ${fmtTime(running.start)}開始`;
    $("timer").textContent=fmtTimer(Date.now()-running.start);
    $("mainBtn").textContent="■ ストップ";
  }else{
@@ -428,7 +428,6 @@ function renderSubQuick(){
   if(!p){p={id:'quicksub_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),name,color:'#89b8bb'};profiles.sub.push(p);save()}
   return {id:p.id,name:p.name,emoji};
  });
- // When no preset exists, show existing sub categories as a fallback.
  if(!entries.length)profiles.sub.filter(p=>p.id!==q.subId).forEach(p=>entries.push({id:p.id,name:p.name,emoji:'✦'}));
  $("subQuickGrid").innerHTML=entries.map(p=>`<button class="subquick-btn ${running&&running.mainId===q.mainId&&running.subId===p.id?'active':''}" data-subquick="${escAttr(p.id)}"><span class="subquick-emoji">${p.emoji}</span><span class="subquick-name">${esc(p.name)}</span></button>`).join('');
  $("subQuickGrid").querySelectorAll('[data-subquick]').forEach(el=>el.onclick=()=>{
