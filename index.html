@@ -206,7 +206,6 @@ const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
 
-// 自動絵文字推測機能
 function guessEmoji(name){
  if(!name) return "📌";
  if(name.match(/玄関|ドア|入口/)) return "🚪";
@@ -585,7 +584,6 @@ function renderSubQuickRows(){
 }
 $("saveSubQuickBtn").onclick=()=>{
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
- // DOM入力から最新値を強制同期・確定させてから永続化
  const rowDivs = $("subQuickRows").querySelectorAll(".quick-editor");
  const newList = [];
  rowDivs.forEach((div)=>{
@@ -601,7 +599,6 @@ $("saveSubQuickBtn").onclick=()=>{
  subQuickConfig[q.id] = newList;
  persistSubQuick();
 
- // profiles.sub へ自動登録・同期
  subQuickConfig[q.id].forEach(item=>{
    if(item.name){
      let existing=profiles.sub.find(s=>s.name===item.name);
@@ -635,6 +632,20 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=18");
+
+// Service Worker 自動更新検知付き登録
+if("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js?v=19").then(reg => {
+    reg.onupdatefound = () => {
+      const installingWorker = reg.installing;
+      installingWorker.onstatechange = () => {
+        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 新しいバージョンを検知したら自動リロードして最新版を適用
+          window.location.reload();
+        }
+      };
+    };
+  });
+}
 </script>
 </body></html>
