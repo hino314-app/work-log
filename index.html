@@ -289,7 +289,9 @@ function renderSubQuick(){
  const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
  if(!q){section.hidden=true;return;}
  section.hidden=false;
- $("subQuickTitleschildText"||"subQuickTitle").textContent=`▼ ${q.name} のサブ分類`;
+ 
+ // 【修正】ここで正しいタイトル要素に反映させます
+ $("subQuickTitle").textContent=`▼ ${q.name} のサブ分類`;
  
  if(!subQuickConfig[q.id]){
    subQuickConfig[q.id]=[{emoji:"📌",name:"その他",subId:ensureProfile("sub","その他")}];
@@ -529,6 +531,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=8");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=9");
 </script>
 </body></html>
