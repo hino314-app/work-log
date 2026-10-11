@@ -298,7 +298,7 @@ function renderSubQuick(){
 
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>`
-   <button class="quick-btn ${running && running.mainId===q.mainId ? 'active':''}" data-quick="${q.id}">
+   <button class="quick-btn ${running && running.mainId===q.mainId && (!q.subId || running.subId===q.subId) ? 'active':''}" data-quick="${q.id}">
      <span class="quick-emoji">${esc(q.emoji||'●')}</span>
      <span class="quick-name">${esc(q.name)}</span>
    </button>
