@@ -1,45 +1,10 @@
-const C = "time-block-quick-v23";
-
-self.addEventListener("install", e => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(C).then(c => c.addAll([
-      "./",
-      "./index.html",
-      "./manifest.webmanifest",
-      "./icon-192.png",
-      "./icon-512.png"
-    ]))
-  );
-});
-
-self.addEventListener("activate", e => {
-  e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== C).map(key => caches.delete(key))
-    )).then(() => {
-      return self.clients.claim();
-    })
-  );
-});
-
-self.addEventListener("fetch", e => {
-  if (e.request.mode === 'navigate' || e.request.url.endsWith('.html') || e.request.url.endsWith('/')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
-    return;
-  }
-  
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      return cached || fetch(e.request).then(response => {
-        let clone = response.clone();
-        if (e.request.method === "GET" && response.status === 200) {
-          caches.open(C).then(cache => cache.put(e.request, clone));
-        }
-        return response;
-      });
-    }).catch(() => caches.match(e.request))
-  );
+const CACHE="time-block-quick-v24";
+const ASSETS=["./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
+self.addEventListener('activate',e=>e.waitUntil((async()=>{await Promise.all((await caches.keys()).filter(k=>k.startsWith('time-block-quick-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));
+self.addEventListener('fetch',e=>{
+ const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;
+ const url=new URL(req.url);const isDocument=req.mode==='navigate'||url.pathname.endsWith('/index.html')||url.pathname.endsWith('/');
+ if(isDocument){e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:'no-store'});if(fresh.ok){const c=await caches.open(CACHE);await c.put('./index.html',fresh.clone())}return fresh}catch(err){return await caches.match('./index.html')||Response.error()}})());return;}
+ e.respondWith((async()=>{const cached=await caches.match(req);if(cached)return cached;try{const fresh=await fetch(req);if(fresh.ok)(await caches.open(CACHE)).put(req,fresh.clone());return fresh}catch(err){return Response.error()}})());
 });

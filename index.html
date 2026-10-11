@@ -65,13 +65,13 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 .quick-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}
 .quick-editor label{display:block;font-size:12px;margin:7px 0 3px}
 .quick-editor input,.quick-editor select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}
-.version-tag{font-size:10px;color:var(--muted);float:right}
+.edit-target{display:flex;align-items:center;gap:7px;margin:9px 0}.edit-target select{flex:1;min-width:0;padding:9px;font-size:14px}.edit-target label{margin:0;white-space:nowrap}.version-tag{font-size:10px;color:var(--muted);float:right}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <h1>時間の塊 <span class="version-tag">v23</span></h1>
+  <h1>時間の塊 <span class="version-tag">v24</span></h1>
   <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
 </header>
 
@@ -83,12 +83,13 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <!-- 3列のメインボタン -->
 <div class="quick-grid" id="quickGrid"></div>
 
-<!-- 選択中のメインに対応するサブ（カスタマイズボタン付き） -->
-<div id="subQuickSection" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;" hidden>
+<!-- 計測とは独立してサブの表示対象を選べる -->
+<div id="subQuickSection" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;">
   <div class="subquick-title">
     <span id="subQuickTitle">▼ サブ分類</span>
     <button class="smallbtn" onclick="openSubQuickSettings()">⚙ カスタマイズ</button>
   </div>
+  <div class="edit-target"><label for="subTargetSelect">表示・編集する項目</label><select id="subTargetSelect" aria-label="計測せずにサブの編集対象を選ぶ"></select></div>
   <div class="subquick-grid" id="subQuickGrid"></div>
 </div>
 
@@ -143,7 +144,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <label>開始</label><input id="editStart" type="datetime-local">
 <label>終了</label><input id="editEnd" type="datetime-local">
 <label>メイン</label><select id="editMain"></select>
-<label>サブ</label><select id="editSub"></select>
+<label>サブ（選択したメインに対応）</label><select id="editSub"></select>
 <div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('editDialog').close()">閉じる</button><button class="smallbtn" id="saveEdit">保存</button></div>
 </div></dialog>
 
@@ -286,6 +287,17 @@ let quickButtons=(()=>{
  return defs;
 })();
 function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons))}
+// v23 saved all buttons under the first main profile. Repair only recognizable names.
+const knownQuickMain={"ご飯":"生活","お風呂":"生活","睡眠":"生活","家事":"生活","ネーム":"漫画","イラスト":"漫画","仕事":"仕事","返信":"仕事","Twitter":"青木さん","青木さん":"青木さん","遊び":"生活","勉強":"生活"};
+for(const q of quickButtons){
+ if(knownQuickMain[q.name]){
+   const p=profiles.main.find(p=>p.name===knownQuickMain[q.name]);
+   if(p && (!getP('main',q.mainId) || (quickButtons.length>1 && quickButtons.every(x=>x.mainId===q.mainId)))) q.mainId=p.id;
+ }
+ if(!getP('main',q.mainId)) q.mainId=ensureProfile('main',q.name);
+}
+persistQuick();
+
 
 const SUB_GROUPS={
  '家事':[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り']],
@@ -343,46 +355,35 @@ function startQuick(id){
 }
 
 function renderSubQuick(){
- const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
- if(!q){section.hidden=true;return;}
+ const section=$('subQuickSection');
+ if(!quickButtons.length){section.hidden=true;return;}
  section.hidden=false;
- 
- $("subQuickTitle").textContent=`▼ ${q.name} のサブ分類`;
- 
- if(!subQuickConfig[q.id]){
-   subQuickConfig[q.id]=[{emoji:"📌",name:"その他"}];
+ let q=quickButtons.find(x=>x.id===lastQuickId);
+ if(!q){q=quickButtons[0];lastQuickId=q.id;}
+ const selector=$('subTargetSelect');
+ const signature=quickButtons.map(x=>x.id+':'+x.name).join('|');
+ if(selector.dataset.signature!==signature){
+   selector.innerHTML=quickButtons.map(x=>`<option value="${escAttr(x.id)}">${esc(x.emoji||'')} ${esc(x.name)}</option>`).join('');
+   selector.dataset.signature=signature;
  }
- const entries=subQuickConfig[q.id];
-
- $("subQuickGrid").innerHTML=entries.map(item=>{
-   let subProf=profiles.sub.find(s=>s.name===item.name);
-   let subId=subProf?subProf.id:"";
-   return `<button class="subquick-btn ${running && running.subId===subId?'active':''}" data-subname="${escAttr(item.name)}">
-     <span class="subquick-emoji">${esc(item.emoji||'📌')}</span>
-     <span class="subquick-name">${esc(item.name)}</span>
-   </button>`;
+ selector.value=q.id;
+ $('subQuickTitle').textContent=`▼ ${q.name} のサブ分類`;
+ const entries=subQuickConfig[q.id]||[];
+ $('subQuickGrid').innerHTML=entries.map(item=>{
+   const p=profiles.sub.find(s=>s.name===item.name);
+   const active=!!(running && running.quickId===q.id && p && running.subId===p.id);
+   return `<button class="subquick-btn ${active?'active':''}" data-subname="${escAttr(item.name)}"><span class="subquick-emoji">${esc(item.emoji||'📌')}</span><span class="subquick-name">${esc(item.name)}</span></button>`;
  }).join('');
-
- $("subQuickGrid").querySelectorAll('[data-subname]').forEach(el=>{
-   el.onclick=()=>{
-     const subName=el.dataset.subname;
-     let subProf=profiles.sub.find(s=>s.name===subName);
-     if(!subProf){
-       subProf={id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name:subName,color:"#4f9be8"};
-       profiles.sub.push(subProf);
-     }
-     const now=Date.now();
-     if(running && now>running.start){
-       logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
-     }
-     running={start:now,mainId:q.mainId,subId:subProf.id,quickId:q.id,memo:""};
-     lastStopped=null;
-     selectedMain=q.mainId; selectedSub=subProf.id; pendingId=null;
-     $("afterStop").style.display="none";
-     save(); renderAll();
-   };
+ $('subQuickGrid').querySelectorAll('[data-subname]').forEach(el=>el.onclick=()=>{
+   const subName=el.dataset.subname;
+   const subId=ensureProfile('sub',subName);
+   const now=Date.now();
+   if(running && now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,6),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||''});
+   running={start:now,mainId:q.mainId,subId,quickId:q.id,memo:''};
+   lastStopped=null;selectedMain=q.mainId;selectedSub=subId;save();renderAll();
  });
 }
+$('subTargetSelect').onchange=()=>{lastQuickId=$('subTargetSelect').value;renderSubQuick();};
 
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>{
@@ -505,16 +506,26 @@ $("mainBtn").onclick=()=>{
  }
 };
 
-function openEdit(id){
- let l=logs.find(x=>x.id===id); if(!l) return;
- editId=id;
- $("editMemo").value=l.memo||"";
- $("editStart").value=toLocal(l.start);
- $("editEnd").value=toLocal(l.end);
- $("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
- $("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
- $("editDialog").showModal();
+function editSubOptions(mainId, selected=''){
+ const names=new Set();
+ quickButtons.filter(q=>q.mainId===mainId).forEach(q=>{
+   if(q.subId){const p=getP('sub',q.subId);if(p)names.add(p.name);}
+   (subQuickConfig[q.id]||[]).forEach(s=>names.add(s.name));
+ });
+ const options=profiles.sub.filter(p=>names.has(p.name)||p.id===selected);
+ $('editSub').innerHTML='<option value="">なし</option>'+options.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('');
+ $('editSub').value=selected;
 }
+$('editMain').onchange=()=>editSubOptions($('editMain').value);
+function openEdit(id){
+ const l=logs.find(x=>x.id===id);if(!l)return;
+ editId=id;$('editMemo').value=l.memo||'';$('editStart').value=toLocal(l.start);$('editEnd').value=toLocal(l.end);
+ $('editMain').innerHTML=profiles.main.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name||'名前なし')}</option>`).join('');
+ $('editMain').value=l.mainId;
+ editSubOptions(l.mainId,l.subId);
+ $('editDialog').showModal();
+}
+
 $("saveEdit").onclick=()=>{
  let l=logs.find(x=>x.id===editId);
  let st=fromLocal($("editStart").value), en=fromLocal($("editEnd").value);
@@ -540,165 +551,63 @@ $("saveProfiles").onclick=()=>{
  save(); $("profilesDialog").close(); renderAll();
 };
 
-function openQuickSettings(){
- renderQuickRows();
- $("quickDialog").showModal();
+let quickDraft=[],subDraft=[],subEditingId=null;
+const freshId=(prefix)=>prefix+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9);
+function readDraftRows(kind){
+ const isSub=kind==='sub', box=$(isSub?'subQuickRows':'quickRows');
+ return [...box.querySelectorAll('.quick-editor')].map((row,i)=>{
+   const old=(isSub?subDraft:quickDraft)[i]||{};
+   return {...old,emoji:row.querySelector(isSub?'.sub-emoji-input':'.emoji-input').value.trim(),name:row.querySelector(isSub?'.sub-name-input':'.name-input').value};
+ });
 }
+function openQuickSettings(){quickDraft=quickButtons.map(q=>({...q}));renderQuickRows();$('quickDialog').showModal();}
 function renderQuickRows(){
- $("quickRows").innerHTML=quickButtons.map((q,i)=>`
-   <div class="quick-editor" data-edited="false">
-     <div class="row" style="justify-content:space-between;margin-bottom:3px">
-       <label style="margin:0">ボタン ${i+1}</label>
-       <button class="smallbtn danger" type="button" onclick="quickButtons.splice(${i},1);renderQuickRows();">削除</button>
-     </div>
-     <div class="row">
-       <input style="width:70px" class="emoji-input" data-quick-i="${i}" data-quick-k="emoji" value="${escAttr(q.emoji)}">
-       <input style="flex:1" class="name-input" data-quick-i="${i}" data-quick-k="name" value="${escAttr(q.name)}" placeholder="名前">
-     </div>
-   </div>
- `).join("");
-
- $("quickRows").querySelectorAll(".name-input").forEach(el=>{
-   el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.quickI;
-     const editor=el.closest('.quick-editor');
-     quickButtons[idx].name=el.value;
-     if(editor.dataset.manualEmoji !== 'true'){
-       const guessed=guessEmoji(el.value);
-       quickButtons[idx].emoji=guessed;
-       const emojiInput=editor.querySelector('.emoji-input');
-       if(emojiInput) emojiInput.value=guessed;
-     }
-   };
- });
- $("quickRows").querySelectorAll(".emoji-input").forEach(el=>{
-   el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.quickI;
-     const editor=el.closest('.quick-editor');
-     editor.dataset.manualEmoji = 'true';
-     quickButtons[idx].emoji=el.value;
-   };
+ $('quickRows').innerHTML=quickDraft.map((q,i)=>`<div class="quick-editor"><div class="row" style="justify-content:space-between"><label>ボタン ${i+1}</label><button type="button" class="smallbtn danger" data-delete="${i}">削除</button></div><div class="row"><input class="emoji-input" style="width:70px" value="${escAttr(q.emoji||'')}"><input class="name-input" style="flex:1" value="${escAttr(q.name||'')}" placeholder="名前"></div></div>`).join('');
+ bindEmojiRows('quickRows','.name-input','.emoji-input');
+ $('quickRows').querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{quickDraft=readDraftRows('quick');quickDraft.splice(+btn.dataset.delete,1);renderQuickRows();});
+}
+function bindEmojiRows(container,nameClass,emojiClass){
+ $(container).querySelectorAll('.quick-editor').forEach(row=>{
+   const name=row.querySelector(nameClass),emoji=row.querySelector(emojiClass);
+   emoji.addEventListener('input',()=>{row.dataset.manualEmoji='true'});
+   name.addEventListener('input',()=>{if(row.dataset.manualEmoji!=='true')emoji.value=guessEmoji(name.value)});
  });
 }
-
+function addQuickRow(){quickDraft=readDraftRows('quick');quickDraft.push({id:freshId('q_'),emoji:'📌',name:'',mainId:'',subId:''});renderQuickRows();}
 function executeSaveQuick(){
- const rowDivs = $("quickRows").querySelectorAll(".quick-editor");
- const newList = [];
- rowDivs.forEach((div)=>{
-   const nameInput = div.querySelector(".name-input");
-   const emojiInput = div.querySelector(".emoji-input");
-   if(nameInput && emojiInput){
-     const nameVal = nameInput.value.trim();
-     if(nameVal){
-       newList.push({
-         id: 'q_' + Math.random().toString(36).slice(2,9),
-         emoji: emojiInput.value.trim() || "📌",
-         name: nameVal,
-         mainId: profiles.main[0].id,
-         subId: ''
-       });
-     }
-   }
+ quickDraft=readDraftRows('quick');
+ const cleaned=quickDraft.filter(q=>q.name.trim()).map(q=>{
+   const name=q.name.trim();
+   const prior=quickButtons.find(old=>old.id===q.id);
+   // Keep original stable id, main/sub linkage, and sub customization.
+   const mainId=prior?.mainId||ensureProfile('main',name);
+   return {...q,id:q.id||freshId('q_'),name,emoji:q.emoji||guessEmoji(name),mainId,subId:prior?.subId||''};
  });
- quickButtons = newList;
- persistQuick();
- $("quickDialog").close();
+ if(!cleaned.length){alert('最低1つの項目を残してください');return;}
+ quickButtons=cleaned;persistQuick();save();$('quickDialog').close();
+ if(!quickButtons.some(q=>q.id===lastQuickId))lastQuickId=quickButtons[0].id;
  renderAll();
 }
-
-$("saveQuickBtn").onclick = executeSaveQuick;
-$("saveQuickBtnTop").onclick = executeSaveQuick;
-
-function addQuickRow(){
- quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'',mainId:profiles.main[0].id,subId:''});
- renderQuickRows();
-}
-
+$('saveQuickBtn').onclick=executeSaveQuick;$('saveQuickBtnTop').onclick=executeSaveQuick;
 function openSubQuickSettings(){
- const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
- if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
- renderSubQuickRows();
- $("subQuickDialog").showModal();
+ const q=quickButtons.find(x=>x.id===lastQuickId);if(!q)return;
+ subEditingId=q.id;subDraft=(subQuickConfig[q.id]||[]).map(item=>({...item}));renderSubQuickRows();$('subQuickDialog').showModal();
 }
 function renderSubQuickRows(){
- const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
- const list=subQuickConfig[q.id];
-
- $("subQuickRows").innerHTML=list.map((item,i)=>`
-   <div class="quick-editor" data-edited="false">
-     <div class="row" style="justify-content:space-between;margin-bottom:3px">
-       <label style="margin:0">サブボタン ${i+1}</label>
-       <button class="smallbtn danger" type="button" onclick="subQuickConfig['${q.id}'].splice(${i},1);renderSubQuickRows();">削除</button>
-     </div>
-     <div class="row">
-       <input style="width:70px" class="sub-emoji-input" data-sub-i="${i}" data-sub-k="emoji" value="${escAttr(item.emoji)}">
-       <input style="flex:1" class="sub-name-input" data-sub-i="${i}" data-sub-k="name" value="${escAttr(item.name)}" placeholder="名前">
-     </div>
-   </div>
- `).join("");
-
- $("subQuickRows").querySelectorAll(".sub-name-input").forEach(el=>{
-   el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.subi;
-     const editor=el.closest('.quick-editor');
-     list[idx].name=el.value;
-     if(editor.dataset.manualEmoji !== 'true'){
-       const guessed=guessEmoji(el.value);
-       list[idx].emoji=guessed;
-       const emojiInput=editor.querySelector('.sub-emoji-input');
-       if(emojiInput) emojiInput.value=guessed;
-     }
-   };
- });
- $("subQuickRows").querySelectorAll(".sub-emoji-input").forEach(el=>{
-   el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.subi;
-     const editor=el.closest('.quick-editor');
-     editor.dataset.manualEmoji = 'true';
-     list[idx].emoji=el.value;
-   };
- });
+ $('subQuickRows').innerHTML=subDraft.map((item,i)=>`<div class="quick-editor"><div class="row" style="justify-content:space-between"><label>サブボタン ${i+1}</label><button type="button" class="smallbtn danger" data-delete="${i}">削除</button></div><div class="row"><input class="sub-emoji-input" style="width:70px" value="${escAttr(item.emoji||'')}"><input class="sub-name-input" style="flex:1" value="${escAttr(item.name||'')}" placeholder="名前"></div></div>`).join('');
+ bindEmojiRows('subQuickRows','.sub-name-input','.sub-emoji-input');
+ $('subQuickRows').querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{subDraft=readDraftRows('sub');subDraft.splice(+btn.dataset.delete,1);renderSubQuickRows();});
 }
-
+function addSubQuickRow(){subDraft=readDraftRows('sub');subDraft.push({emoji:'📌',name:''});renderSubQuickRows();}
 function executeSaveSubQuick(){
- const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
- const rowDivs = $("subQuickRows").querySelectorAll(".quick-editor");
- const newList = [];
- rowDivs.forEach((div)=>{
-   const nameInput = div.querySelector(".sub-name-input");
-   const emojiInput = div.querySelector(".sub-emoji-input");
-   if(nameInput && emojiInput){
-     const nameVal = nameInput.value.trim();
-     if(nameVal){
-       newList.push({emoji: emojiInput.value.trim() || "📌", name: nameVal});
-     }
-   }
- });
- subQuickConfig[q.id] = newList;
- persistSubQuick();
-
- subQuickConfig[q.id].forEach(item=>{
-   if(item.name){
-     let existing=profiles.sub.find(s=>s.name===item.name);
-     if(!existing){
-       profiles.sub.push({id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name:item.name,color:"#4f9be8"});
-     }
-   }
- });
- save();
- $("subQuickDialog").close();
- renderAll();
+ if(!quickButtons.some(q=>q.id===subEditingId)){alert('編集対象が見つかりません');return;}
+ subDraft=readDraftRows('sub');
+ const items=subDraft.filter(item=>item.name.trim()).map(item=>({name:item.name.trim(),emoji:item.emoji||guessEmoji(item.name)}));
+ subQuickConfig[subEditingId]=items;
+ items.forEach(item=>ensureProfile('sub',item.name));
+ persistSubQuick();save();$('subQuickDialog').close();renderAll();
 }
-
-$("saveSubQuickBtn").onclick = executeSaveSubQuick;
-$("saveSubQuickBtnTop").onclick = executeSaveSubQuick;
-
-function addSubQuickRow(){
- const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
- if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
- subQuickConfig[q.id].push({emoji:"📌",name:""});
- renderSubQuickRows();
-}
+$('saveSubQuickBtn').onclick=executeSaveSubQuick;$('saveSubQuickBtnTop').onclick=executeSaveSubQuick;
 
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function escAttr(s){return esc(s)}
@@ -718,12 +627,14 @@ setInterval(()=>{
 renderAll();
 
 if("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js?v=23").then(reg => {
+ let swReloaded=false;
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!swReloaded){swReloaded=true;window.location.reload();}});
+  navigator.serviceWorker.register("./sw.js?v=24").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {
         if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          window.location.reload();
+          // controllerchange handles the refresh once the new worker controls the page
         }
       };
     };
