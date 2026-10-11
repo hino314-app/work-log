@@ -404,27 +404,38 @@ function startQuick(id){
  running={start:now,mainId:q.mainId,subId:q.subId||"",memo:""};selectedMain=q.mainId;selectedSub=q.subId||"";pendingId=null;
  $("afterStop").style.display="none";save();renderAll();
 }
-const HOUSE_SUBS=[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🚰','水回り']];
+const HOUSE_SUBS=[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🧽','水回り']];
+const SUB_GROUPS={
+ '家事':HOUSE_SUBS,
+ 'ご飯':[['🍳','料理'],['🥗','食事'],['🧼','片付け']],
+ 'お風呂':[['🚿','シャワー'],['🛀','入浴'],['🧴','スキンケア']],
+ 'ネーム':[['✍️','プロット'],['📖','ネーム'],['📝','修正']],
+ '仕事':[['💻','作業'],['📨','連絡'],['🗂️','整理']],
+ 'Twitter':[['𝕏','閲覧'],['💬','コメント'],['📝','投稿']],
+ 'イラスト':[['✏️','ラフ'],['🎨','彩色'],['✨','仕上げ']],
+ '睡眠':[['🌙','就寝'],['☀️','起床']],
+ '返信':[['💬','コメント'],['✉️','メール']]
+};
 let lastQuickId=null;
 function renderSubQuick(){
- const q=quickButtons.find(x=>x.id===lastQuickId);
- const section=$("subQuickSection");
+ const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
  if(!q){section.hidden=true;return}
- section.hidden=false;$("subQuickTitle").textContent=`${q.name}のサブ（押すと切り替え）`;
- const subs=profiles.sub.filter(p=>p.id!==q.subId);
- if(q.name==='家事'){
-  HOUSE_SUBS.forEach(([emoji,name])=>{if(!subs.some(p=>p.name===name)&&!profiles.sub.some(p=>p.name===name)){
-   const p={id:'house_sub_'+name,name,color:'#89b8bb'};profiles.sub.push(p);subs.push(p)
-  }})
- }
- $("subQuickGrid").innerHTML=subs.map(p=>{
-  const match=HOUSE_SUBS.find(x=>x[1]===p.name);
-  const emoji=match?match[0]:(p.name.includes('Twitter')?'𝕏':p.name.includes('コメント')?'💬':p.name.includes('寝')?'🌙':p.name.includes('ご飯')?'🍚':p.name.includes('風呂')?'🛁':'✦');
-  return `<button class="subquick-btn ${running&&running.mainId===q.mainId&&running.subId===p.id?'active':''}" data-subquick="${escAttr(p.id)}"><span class="subquick-emoji">${emoji}</span><span class="subquick-name">${esc(p.name)}</span></button>`
- }).join('');
+ section.hidden=false;
+ $("subQuickTitle").textContent=`${q.name}のサブ（押すと計測切り替え）`;
+ const suggested=SUB_GROUPS[q.name]||[];
+ const entries=suggested.map(([emoji,name])=>{
+  let p=profiles.sub.find(p=>p.name===name);
+  if(!p){p={id:'quicksub_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),name,color:'#89b8bb'};profiles.sub.push(p);save()}
+  return {id:p.id,name:p.name,emoji};
+ });
+ // When no preset exists, show existing sub categories as a fallback.
+ if(!entries.length)profiles.sub.filter(p=>p.id!==q.subId).forEach(p=>entries.push({id:p.id,name:p.name,emoji:'✦'}));
+ $("subQuickGrid").innerHTML=entries.map(p=>`<button class="subquick-btn ${running&&running.mainId===q.mainId&&running.subId===p.id?'active':''}" data-subquick="${escAttr(p.id)}"><span class="subquick-emoji">${p.emoji}</span><span class="subquick-name">${esc(p.name)}</span></button>`).join('');
  $("subQuickGrid").querySelectorAll('[data-subquick]').forEach(el=>el.onclick=()=>{
-  const now=Date.now();if(running&&now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||''});
-  running={start:now,mainId:q.mainId,subId:el.dataset.subquick,memo:''};selectedMain=q.mainId;selectedSub=el.dataset.subquick;pendingId=null;$("afterStop").style.display='none';save();renderAll();
+  const now=Date.now();
+  if(running&&now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||''});
+  running={start:now,mainId:q.mainId,subId:el.dataset.subquick,memo:''};selectedMain=q.mainId;selectedSub=el.dataset.subquick;pendingId=null;
+  $("afterStop").style.display='none';save();renderAll();
  });
 }
 function renderQuick(){
@@ -451,7 +462,14 @@ function saveQuickSettings(){if(quickDraft.some(q=>!q.name.trim()||!q.mainId)){a
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function escAttr(s){return esc(s)}
 function renderAll(){renderPickers();renderFilters();renderTimeline("main");renderTimeline("sub");renderLogs();updateRunning();renderQuick()}
-setInterval(()=>{updateRunning();renderQuick()},1000);renderAll();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");
+function tickQuickTimer(){
+ const elapsed=running?Date.now()-Number(running.start):0;
+ $("quickTimer").textContent=fmtTimer(elapsed);
+ $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
+}
+setInterval(tickQuickTimer,250);
+setInterval(()=>{updateRunning();renderTimeline("main");renderTimeline("sub")},1000);
+renderAll();tickQuickTimer();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js?v=3");
 </script>
 </body></html>
