@@ -71,7 +71,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <body>
 <div class="app">
 <header>
-  <h1>時間の塊 <span class="version-tag">v21</span></h1>
+  <h1>時間の塊 <span class="version-tag">v23</span></h1>
   <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
 </header>
 
@@ -155,12 +155,10 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </div></dialog>
 
 <dialog id="quickDialog"><div class="dialog-inner">
-<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-  <h2 style="margin:0;font-size:17px">よく使う項目（メイン）のカスタマイズ</h2>
-  <div class="row" style="gap:6px">
-    <button class="smallbtn" type="button" onclick="document.getElementById('quickDialog').close()">閉じる</button>
-    <button class="smallbtn" type="button" id="saveQuickBtnTop">保存</button>
-  </div>
+<div class="row" style="justify-content:flex-end;align-items:center;gap:6px;margin-bottom:10px">
+  <h2 style="margin:0;font-size:16px;margin-right:auto">よく使う項目（メイン）のカスタマイズ</h2>
+  <button class="smallbtn" type="button" onclick="document.getElementById('quickDialog').close()">閉じる</button>
+  <button class="smallbtn" type="button" id="saveQuickBtnTop">保存</button>
 </div>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="quickRows"></div>
@@ -169,12 +167,10 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </div></dialog>
 
 <dialog id="subQuickDialog"><div class="dialog-inner">
-<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-  <h2 style="margin:0;font-size:17px">サブ項目のカスタマイズ</h2>
-  <div class="row" style="gap:6px">
-    <button class="smallbtn" type="button" onclick="document.getElementById('subQuickDialog').close()">閉じる</button>
-    <button class="smallbtn" type="button" id="saveSubQuickBtnTop">保存</button>
-  </div>
+<div class="row" style="justify-content:flex-end;align-items:center;gap:6px;margin-bottom:10px">
+  <h2 style="margin:0;font-size:16px;margin-right:auto">サブ項目のカスタマイズ</h2>
+  <button class="smallbtn" type="button" onclick="document.getElementById('subQuickDialog').close()">閉じる</button>
+  <button class="smallbtn" type="button" id="saveSubQuickBtnTop">保存</button>
 </div>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="subQuickRows"></div>
@@ -184,7 +180,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 
 <script>
 const $=id=>document.getElementById(id);
-const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1", SUB_QUICK_KEY="work_sub_quick_buttons_v3";
+const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1", SUB_QUICK_KEY="work_sub_quick_buttons_v3", LAST_RUN_KEY="last_stopped_timer_v1";
 
 const defaultProfiles={
  main:[
@@ -204,6 +200,7 @@ let profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")||defaultProfi
 
 let logs=JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
 let running=JSON.parse(localStorage.getItem(RUN_KEY)||"null");
+let lastStopped=JSON.parse(localStorage.getItem(LAST_RUN_KEY)||"null");
 let selectedMain=profiles.main[0]?.id||"", selectedSub="", pendingId=null, editId=null, profileMode="main", filterMain="all", filterSub="all";
 
 const pad=n=>String(n).padStart(2,"0");
@@ -220,15 +217,24 @@ const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.flo
 const toLocal=ts=>{const d=new Date(ts);const local=new Date(ts-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)};
 const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
-function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
+function save(){
+ localStorage.setItem(LOG_KEY,JSON.stringify(logs));
+ localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+ if(running) localStorage.setItem(RUN_KEY,JSON.stringify(running));
+ else localStorage.removeItem(RUN_KEY);
+ if(lastStopped) localStorage.setItem(LAST_RUN_KEY,JSON.stringify(lastStopped));
+ else localStorage.removeItem(LAST_RUN_KEY);
+}
 
-// 自動絵文字推測機能（手動変更ガード付き）
+// 絵文字自動推測機能
 function guessEmoji(name){
  if(!name) return "📌";
+ if(name.match(/スキンケア|肌|美容/)) return "🧴";
  if(name.match(/玄関|ドア|入口/)) return "🚪";
  if(name.match(/掃除|片付|ゴミ|清掃|ホウキ/)) return "🧹";
  if(name.match(/風呂|バス|シャワー|洗面/)) return "🛁";
  if(name.match(/料理|ご飯|食事|朝食|昼食|夕食|食べる|クック/)) return "🍚";
+ if(name.match(/洗濯|洗い物|服/)) return "🧺";
  if(name.match(/買|スーパー|コンビニ|ショッピング/)) return "🛒";
  if(name.match(/仕事|作業|PC|パソコン|デスク/)) return "💻";
  if(name.match(/ネーム|プロット|原稿|漫画|描/)) return "✍️";
@@ -317,6 +323,9 @@ let lastQuickId=null;
 if(running){
  const found=quickButtons.find(q=>q.id===running.quickId || q.mainId===running.mainId);
  if(found) lastQuickId=found.id;
+} else if(lastStopped){
+ const found=quickButtons.find(q=>q.id===lastStopped.quickId || q.mainId===lastStopped.mainId);
+ if(found) lastQuickId=found.id;
 }
 
 function startQuick(id){
@@ -327,6 +336,7 @@ function startQuick(id){
    logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
  }
  running={start:now,mainId:q.mainId,subId:q.subId||"",quickId:q.id,memo:""};
+ lastStopped=null;
  selectedMain=q.mainId; selectedSub=q.subId||""; pendingId=null;
  $("afterStop").style.display="none";
  save(); renderAll();
@@ -366,6 +376,7 @@ function renderSubQuick(){
        logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
      }
      running={start:now,mainId:q.mainId,subId:subProf.id,quickId:q.id,memo:""};
+     lastStopped=null;
      selectedMain=q.mainId; selectedSub=subProf.id; pendingId=null;
      $("afterStop").style.display="none";
      save(); renderAll();
@@ -387,17 +398,29 @@ function renderQuick(){
 
  $("quickGrid").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>startQuick(el.dataset.quick));
  
- $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
- $("quickTimer").textContent=running?fmtTimer(Date.now()-running.start):"00:00:00";
+ if(running){
+   $("quickStatus").textContent=`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`;
+   $("quickTimer").textContent=fmtTimer(Date.now()-running.start);
+ } else if(lastStopped){
+   let qObj = quickButtons.find(x=>x.id === lastStopped.quickId);
+   let targetName = qObj ? (qObj.emoji + " " + qObj.name + (lastStopped.subId ? ` / ${getP("sub", lastStopped.subId)?.name||""}` : "")) : (getP("sub", lastStopped.subId)?.name || getP("main", lastStopped.mainId)?.name || "直前");
+   $("quickStatus").textContent=`停止中 ✍️ ${targetName}`;
+   $("quickTimer").textContent=fmtTimer(lastStopped.duration);
+ } else {
+   $("quickStatus").textContent="■ 停止中";
+   $("quickTimer").textContent="00:00:00";
+ }
+
  $("quickStop").disabled=!running;
- 
  renderSubQuick();
 }
 
 $("quickStop").onclick=()=>{
  if(running){
    const now=Date.now();
+   const dur = now - running.start;
    logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   lastStopped={quickId:running.quickId||"", mainId:running.mainId, subId:running.subId, duration:dur};
    running=null; save(); renderAll();
  }
 };
@@ -470,11 +493,14 @@ function updateRunning(){
 $("mainBtn").onclick=()=>{
  if(running){
    const now=Date.now();
+   const dur = now - running.start;
    logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   lastStopped={quickId:running.quickId||"", mainId:running.mainId, subId:running.subId, duration:dur};
    running=null; save(); renderAll();
  }else{
    if(!selectedMain) return;
    running={start:Date.now(),mainId:selectedMain,subId:selectedSub};
+   lastStopped=null;
    save(); renderAll();
  }
 };
@@ -682,15 +708,17 @@ function renderAll(){
 }
 
 setInterval(()=>{
- const elapsed=running?Date.now()-Number(running.start):0;
- $("quickTimer").textContent=fmtTimer(elapsed);
- $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
+ if(running){
+   const elapsed=Date.now()-Number(running.start);
+   $("quickTimer").textContent=fmtTimer(elapsed);
+   $("quickStatus").textContent=`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`;
+ }
 },250);
 
 renderAll();
 
 if("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js?v=21").then(reg => {
+  navigator.serviceWorker.register("./sw.js?v=23").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {

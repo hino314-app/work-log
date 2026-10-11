@@ -1,4 +1,4 @@
-const C = "time-block-quick-v21";
+const C = "time-block-quick-v23";
 
 self.addEventListener("install", e => {
   self.skipWaiting();
