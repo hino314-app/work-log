@@ -65,11 +65,15 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 .quick-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}
 .quick-editor label{display:block;font-size:12px;margin:7px 0 3px}
 .quick-editor input,.quick-editor select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}
+.version-tag{font-size:10px;color:var(--muted);float:right}
 </style>
 </head>
 <body>
 <div class="app">
-<header><h1>時間の塊</h1><div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div></header>
+<header>
+  <h1>時間の塊 <span class="version-tag">v21</span></h1>
+  <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
+</header>
 
 <section class="card now" id="quickCard">
 <div class="status" id="quickStatus">今の記録</div>
@@ -151,7 +155,13 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </div></dialog>
 
 <dialog id="quickDialog"><div class="dialog-inner">
-<h2>よく使う項目（メイン）のカスタマイズ</h2>
+<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+  <h2 style="margin:0;font-size:17px">よく使う項目（メイン）のカスタマイズ</h2>
+  <div class="row" style="gap:6px">
+    <button class="smallbtn" type="button" onclick="document.getElementById('quickDialog').close()">閉じる</button>
+    <button class="smallbtn" type="button" id="saveQuickBtnTop">保存</button>
+  </div>
+</div>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="quickRows"></div>
 <div class="row" style="margin-top:12px"><button class="smallbtn" type="button" onclick="addQuickRow()">＋ ボタンを追加</button></div>
@@ -159,7 +169,13 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </div></dialog>
 
 <dialog id="subQuickDialog"><div class="dialog-inner">
-<h2>サブ項目のカスタマイズ</h2>
+<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+  <h2 style="margin:0;font-size:17px">サブ項目のカスタマイズ</h2>
+  <div class="row" style="gap:6px">
+    <button class="smallbtn" type="button" onclick="document.getElementById('subQuickDialog').close()">閉じる</button>
+    <button class="smallbtn" type="button" id="saveSubQuickBtnTop">保存</button>
+  </div>
+</div>
 <p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="subQuickRows"></div>
 <div class="row" style="margin-top:12px"><button class="smallbtn" type="button" onclick="addSubQuickRow()">＋ サブボタンを追加</button></div>
@@ -206,12 +222,13 @@ const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
 
+// 自動絵文字推測機能（手動変更ガード付き）
 function guessEmoji(name){
  if(!name) return "📌";
  if(name.match(/玄関|ドア|入口/)) return "🚪";
  if(name.match(/掃除|片付|ゴミ|清掃|ホウキ/)) return "🧹";
  if(name.match(/風呂|バス|シャワー|洗面/)) return "🛁";
- if(name.match(/料理|ご飯|食事|朝食|昼食|夕食|食べる|クック/)) return "🍳";
+ if(name.match(/料理|ご飯|食事|朝食|昼食|夕食|食べる|クック/)) return "🍚";
  if(name.match(/買|スーパー|コンビニ|ショッピング/)) return "🛒";
  if(name.match(/仕事|作業|PC|パソコン|デスク/)) return "💻";
  if(name.match(/ネーム|プロット|原稿|漫画|描/)) return "✍️";
@@ -503,7 +520,7 @@ function openQuickSettings(){
 }
 function renderQuickRows(){
  $("quickRows").innerHTML=quickButtons.map((q,i)=>`
-   <div class="quick-editor">
+   <div class="quick-editor" data-edited="false">
      <div class="row" style="justify-content:space-between;margin-bottom:3px">
        <label style="margin:0">ボタン ${i+1}</label>
        <button class="smallbtn danger" type="button" onclick="quickButtons.splice(${i},1);renderQuickRows();">削除</button>
@@ -518,25 +535,54 @@ function renderQuickRows(){
  $("quickRows").querySelectorAll(".name-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
      const idx=+el.dataset.quickI;
+     const editor=el.closest('.quick-editor');
      quickButtons[idx].name=el.value;
-     const guessed=guessEmoji(el.value);
-     quickButtons[idx].emoji=guessed;
-     const emojiInput=$(`quickRows`).querySelector(`[data-quick-i="${idx}"][data-quick-k="emoji"]`);
-     if(emojiInput) emojiInput.value=guessed;
+     if(editor.dataset.manualEmoji !== 'true'){
+       const guessed=guessEmoji(el.value);
+       quickButtons[idx].emoji=guessed;
+       const emojiInput=editor.querySelector('.emoji-input');
+       if(emojiInput) emojiInput.value=guessed;
+     }
    };
  });
  $("quickRows").querySelectorAll(".emoji-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
      const idx=+el.dataset.quickI;
+     const editor=el.closest('.quick-editor');
+     editor.dataset.manualEmoji = 'true';
      quickButtons[idx].emoji=el.value;
    };
  });
 }
-$("saveQuickBtn").onclick=()=>{
+
+function executeSaveQuick(){
+ const rowDivs = $("quickRows").querySelectorAll(".quick-editor");
+ const newList = [];
+ rowDivs.forEach((div)=>{
+   const nameInput = div.querySelector(".name-input");
+   const emojiInput = div.querySelector(".emoji-input");
+   if(nameInput && emojiInput){
+     const nameVal = nameInput.value.trim();
+     if(nameVal){
+       newList.push({
+         id: 'q_' + Math.random().toString(36).slice(2,9),
+         emoji: emojiInput.value.trim() || "📌",
+         name: nameVal,
+         mainId: profiles.main[0].id,
+         subId: ''
+       });
+     }
+   }
+ });
+ quickButtons = newList;
  persistQuick();
  $("quickDialog").close();
  renderAll();
-};
+}
+
+$("saveQuickBtn").onclick = executeSaveQuick;
+$("saveQuickBtnTop").onclick = executeSaveQuick;
+
 function addQuickRow(){
  quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'',mainId:profiles.main[0].id,subId:''});
  renderQuickRows();
@@ -553,7 +599,7 @@ function renderSubQuickRows(){
  const list=subQuickConfig[q.id];
 
  $("subQuickRows").innerHTML=list.map((item,i)=>`
-   <div class="quick-editor">
+   <div class="quick-editor" data-edited="false">
      <div class="row" style="justify-content:space-between;margin-bottom:3px">
        <label style="margin:0">サブボタン ${i+1}</label>
        <button class="smallbtn danger" type="button" onclick="subQuickConfig['${q.id}'].splice(${i},1);renderSubQuickRows();">削除</button>
@@ -568,21 +614,27 @@ function renderSubQuickRows(){
  $("subQuickRows").querySelectorAll(".sub-name-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
      const idx=+el.dataset.subi;
+     const editor=el.closest('.quick-editor');
      list[idx].name=el.value;
-     const guessed=guessEmoji(el.value);
-     list[idx].emoji=guessed;
-     const emojiInput=$(`subQuickRows`).querySelector(`[data-sub-i="${idx}"][data-sub-k="emoji"]`);
-     if(emojiInput) emojiInput.value=guessed;
+     if(editor.dataset.manualEmoji !== 'true'){
+       const guessed=guessEmoji(el.value);
+       list[idx].emoji=guessed;
+       const emojiInput=editor.querySelector('.sub-emoji-input');
+       if(emojiInput) emojiInput.value=guessed;
+     }
    };
  });
  $("subQuickRows").querySelectorAll(".sub-emoji-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
      const idx=+el.dataset.subi;
+     const editor=el.closest('.quick-editor');
+     editor.dataset.manualEmoji = 'true';
      list[idx].emoji=el.value;
    };
  });
 }
-$("saveSubQuickBtn").onclick=()=>{
+
+function executeSaveSubQuick(){
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  const rowDivs = $("subQuickRows").querySelectorAll(".quick-editor");
  const newList = [];
@@ -610,7 +662,11 @@ $("saveSubQuickBtn").onclick=()=>{
  save();
  $("subQuickDialog").close();
  renderAll();
-};
+}
+
+$("saveSubQuickBtn").onclick = executeSaveSubQuick;
+$("saveSubQuickBtnTop").onclick = executeSaveSubQuick;
+
 function addSubQuickRow(){
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
@@ -633,14 +689,12 @@ setInterval(()=>{
 
 renderAll();
 
-// Service Worker 自動更新検知付き登録
 if("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js?v=19").then(reg => {
+  navigator.serviceWorker.register("./sw.js?v=21").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {
         if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // 新しいバージョンを検知したら自動リロードして最新版を適用
           window.location.reload();
         }
       };
