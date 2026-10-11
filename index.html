@@ -206,6 +206,26 @@ const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
 
+// 自動絵文字推測機能
+function guessEmoji(name){
+ if(!name) return "📌";
+ if(name.match(/玄関|ドア|入口/)) return "🚪";
+ if(name.match(/掃除|片付|ゴミ|清掃|ホウキ/)) return "🧹";
+ if(name.match(/風呂|バス|シャワー|洗面/)) return "🛁";
+ if(name.match(/料理|ご飯|食事|朝食|昼食|夕食|食べる|クック/)) return "🍳";
+ if(name.match(/買|スーパー|コンビニ|ショッピング/)) return "🛒";
+ if(name.match(/仕事|作業|PC|パソコン|デスク/)) return "💻";
+ if(name.match(/ネーム|プロット|原稿|漫画|描/)) return "✍️";
+ if(name.match(/イラスト|絵|彩色|色/)) return "🎨";
+ if(name.match(/寝|睡眠|布団|ベッド|睡眠/)) return "🌙";
+ if(name.match(/散歩|歩|走|運動|ジム/)) return "🏃";
+ if(name.match(/映画|動画|アニメ|見る/)) return "🎬";
+ if(name.match(/本|読書|小説|雑誌/)) return "📖";
+ if(name.match(/返信|メール|連絡|チャット|LINE/)) return "💬";
+ if(name.match(/Twitter|X|ツイート/)) return "𝕏";
+ return "📌";
+}
+
 const quickDefaults=[
  {emoji:"🍚",name:"ご飯",mainName:"生活",subName:"ご飯"},
  {emoji:"🛁",name:"お風呂",mainName:"生活",subName:"お風呂"},
@@ -490,16 +510,26 @@ function renderQuickRows(){
        <button class="smallbtn danger" type="button" onclick="quickButtons.splice(${i},1);renderQuickRows();">削除</button>
      </div>
      <div class="row">
-       <input style="width:70px" data-quick-i="${i}" data-quick-k="emoji" value="${escAttr(q.emoji)}">
-       <input style="flex:1" data-quick-i="${i}" data-quick-k="name" value="${escAttr(q.name)}" placeholder="名前">
+       <input style="width:70px" class="emoji-input" data-quick-i="${i}" data-quick-k="emoji" value="${escAttr(q.emoji)}">
+       <input style="flex:1" class="name-input" data-quick-i="${i}" data-quick-k="name" value="${escAttr(q.name)}" placeholder="名前">
      </div>
    </div>
  `).join("");
 
- $("quickRows").querySelectorAll("input").forEach(el=>{
+ $("quickRows").querySelectorAll(".name-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.quickI, k=el.dataset.quickK;
-     quickButtons[idx][k]=el.value;
+     const idx=+el.dataset.quickI;
+     quickButtons[idx].name=el.value;
+     const guessed=guessEmoji(el.value);
+     quickButtons[idx].emoji=guessed;
+     const emojiInput=$(`quickRows`).querySelector(`[data-quick-i="${idx}"][data-quick-k="emoji"]`);
+     if(emojiInput) emojiInput.value=guessed;
+   };
+ });
+ $("quickRows").querySelectorAll(".emoji-input").forEach(el=>{
+   el.oninput=el.onchange=()=>{
+     const idx=+el.dataset.quickI;
+     quickButtons[idx].emoji=el.value;
    };
  });
 }
@@ -530,26 +560,54 @@ function renderSubQuickRows(){
        <button class="smallbtn danger" type="button" onclick="subQuickConfig['${q.id}'].splice(${i},1);renderSubQuickRows();">削除</button>
      </div>
      <div class="row">
-       <input style="width:70px" data-sub-i="${i}" data-sub-k="emoji" value="${escAttr(item.emoji)}">
-       <input style="flex:1" data-sub-i="${i}" data-sub-k="name" value="${escAttr(item.name)}" placeholder="名前">
+       <input style="width:70px" class="sub-emoji-input" data-sub-i="${i}" data-sub-k="emoji" value="${escAttr(item.emoji)}">
+       <input style="flex:1" class="sub-name-input" data-sub-i="${i}" data-sub-k="name" value="${escAttr(item.name)}" placeholder="名前">
      </div>
    </div>
  `).join("");
 
- $("subQuickRows").querySelectorAll("input").forEach(el=>{
+ $("subQuickRows").querySelectorAll(".sub-name-input").forEach(el=>{
    el.oninput=el.onchange=()=>{
-     const idx=+el.dataset.subi, k=el.dataset.subk;
-     subQuickConfig[q.id][idx][k]=el.value;
+     const idx=+el.dataset.subi;
+     list[idx].name=el.value;
+     const guessed=guessEmoji(el.value);
+     list[idx].emoji=guessed;
+     const emojiInput=$(`subQuickRows`).querySelector(`[data-sub-i="${idx}"][data-sub-k="emoji"]`);
+     if(emojiInput) emojiInput.value=guessed;
+   };
+ });
+ $("subQuickRows").querySelectorAll(".sub-emoji-input").forEach(el=>{
+   el.oninput=el.onchange=()=>{
+     const idx=+el.dataset.subi;
+     list[idx].emoji=el.value;
    };
  });
 }
 $("saveSubQuickBtn").onclick=()=>{
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
+ // DOM入力から最新値を強制同期・確定させてから永続化
+ const rowDivs = $("subQuickRows").querySelectorAll(".quick-editor");
+ const newList = [];
+ rowDivs.forEach((div)=>{
+   const nameInput = div.querySelector(".sub-name-input");
+   const emojiInput = div.querySelector(".sub-emoji-input");
+   if(nameInput && emojiInput){
+     const nameVal = nameInput.value.trim();
+     if(nameVal){
+       newList.push({emoji: emojiInput.value.trim() || "📌", name: nameVal});
+     }
+   }
+ });
+ subQuickConfig[q.id] = newList;
  persistSubQuick();
- // サブで追加された名前をprofiles.subにも自動登録
+
+ // profiles.sub へ自動登録・同期
  subQuickConfig[q.id].forEach(item=>{
-   if(item.name && !profiles.sub.find(s=>s.name===item.name)){
-     profiles.sub.push({id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name:item.name,color:"#4f9be8"});
+   if(item.name){
+     let existing=profiles.sub.find(s=>s.name===item.name);
+     if(!existing){
+       profiles.sub.push({id:'sub_'+Date.now()+Math.random().toString(36).slice(2,5),name:item.name,color:"#4f9be8"});
+     }
    }
  });
  save();
@@ -577,6 +635,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=16");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=18");
 </script>
 </body></html>
