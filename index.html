@@ -79,7 +79,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <!-- 3列のメインボタン -->
 <div class="quick-grid" id="quickGrid"></div>
 
-<!-- 選択中のメインに対応するサブ（右上カスタマイズボタン付き） -->
+<!-- 選択中のメインに対応するサブ（カスタマイズボタン付き） -->
 <div id="subQuickSection" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;" hidden>
   <div class="subquick-title">
     <span id="subQuickTitle">▼ サブ分類</span>
@@ -146,15 +146,21 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <dialog id="profilesDialog"><div class="dialog-inner">
 <h2 id="profilesTitle">色・名前を編集</h2>
 <div class="profile-list" id="profileList"></div>
-<div class="row" style="margin-top:12px"><button class="smallbtn" id="addProfile">＋ 新しい色を追加</button></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" id="addProfile">＋ 色を追加</button></div>
 <div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('profilesDialog').close()">閉じる</button><button class="smallbtn" id="saveProfiles">保存</button></div>
 </div></dialog>
 
-<dialog id="quickDialog"><div class="dialog-inner"><h2>よく使う項目の設定</h2><p class="hint">表示するボタンを編集できます。</p><div id="quickRows"></div><button class="smallbtn" onclick="addQuickRow()">＋ ボタンを追加</button><div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveQuickSettings()">保存</button></div></div></dialog>
+<dialog id="quickDialog"><div class="dialog-inner">
+<h2>よく使う項目（メイン）のカスタマイズ</h2>
+<p class="hint">追加・編集・削除が自由にできます。</p>
+<div id="quickRows"></div>
+<div class="row" style="margin-top:12px"><button class="smallbtn" onclick="addQuickRow()">＋ ボタンを追加</button></div>
+<div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('quickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveQuickSettings()">保存</button></div>
+</div></dialog>
 
 <dialog id="subQuickDialog"><div class="dialog-inner">
 <h2>サブ項目のカスタマイズ</h2>
-<p class="hint">サブボタンの追加・編集・削除ができます。</p>
+<p class="hint">追加・編集・削除が自由にできます。</p>
 <div id="subQuickRows"></div>
 <div class="row" style="margin-top:12px"><button class="smallbtn" onclick="addSubQuickRow()">＋ サブボタンを追加</button></div>
 <div class="dialog-actions"><button class="smallbtn" onclick="document.getElementById('subQuickDialog').close()">閉じる</button><button class="smallbtn" onclick="saveSubQuickSettings()">保存</button></div>
@@ -473,33 +479,55 @@ $("saveProfiles").onclick=()=>{
 };
 
 function openQuickSettings(){
+ renderQuickRows();
+ $("quickDialog").showModal();
+}
+function renderQuickRows(){
  $("quickRows").innerHTML=quickButtons.map((q,i)=>`
    <div class="quick-editor">
-     <label>ボタン ${i+1}（絵文字 / 名前）</label>
+     <div class="row" style="justify-content:space-between;margin-bottom:3px">
+       <label style="margin:0">ボタン ${i+1}</label>
+       <button class="smallbtn danger" type="button" onclick="quickButtons.splice(${i},1);renderQuickRows();">削除</button>
+     </div>
      <div class="row">
-       <input style="width:70px" data-i="${i}" data-k="emoji" value="${escAttr(q.emoji)}">
-       <input style="flex:1" data-i="${i}" data-k="name" value="${escAttr(q.name)}">
+       <input style="width:70px" data-quick-i="${i}" data-quick-k="emoji" value="${escAttr(q.emoji)}">
+       <input style="flex:1" data-quick-i="${i}" data-quick-k="name" value="${escAttr(q.name)}" placeholder="名前">
      </div>
    </div>
  `).join("");
+
  $("quickRows").querySelectorAll("input").forEach(el=>{
-   el.onchange=()=>quickButtons[+el.dataset.i][el.dataset.k]=el.value;
+   el.onchange=()=>{
+     const idx=+el.dataset.quickI, k=el.dataset.quickK;
+     quickButtons[idx][k]=el.value;
+   };
  });
- $("quickDialog").showModal();
 }
-function saveQuickSettings(){persistQuick(); $("quickDialog").close(); renderAll();}
-function addQuickRow(){quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});openQuickSettings();}
+function saveQuickSettings(){
+ persistQuick();
+ $("quickDialog").close();
+ renderAll();
+}
+function addQuickRow(){
+ quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});
+ renderQuickRows();
+}
 
 function openSubQuickSettings(){
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
+ renderSubQuickRows();
+ $("subQuickDialog").showModal();
+}
+function renderSubQuickRows(){
+ const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  const list=subQuickConfig[q.id];
- 
+
  $("subQuickRows").innerHTML=list.map((item,i)=>`
    <div class="quick-editor">
      <div class="row" style="justify-content:space-between;margin-bottom:3px">
        <label style="margin:0">サブボタン ${i+1}</label>
-       <button class="smallbtn danger" onclick="subQuickConfig['${q.id}'].splice(${i},1);openSubQuickSettings();">削除</button>
+       <button class="smallbtn danger" type="button" onclick="subQuickConfig['${q.id}'].splice(${i},1);renderSubQuickRows();">削除</button>
      </div>
      <div class="row">
        <input style="width:70px" data-sub-i="${i}" data-sub-k="emoji" value="${escAttr(item.emoji)}">
@@ -514,10 +542,8 @@ function openSubQuickSettings(){
      subQuickConfig[q.id][idx][k]=el.value;
    };
  });
- $("subQuickDialog").showModal();
 }
 function saveSubQuickSettings(){
- const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  persistSubQuick();
  $("subQuickDialog").close();
  renderAll();
@@ -526,7 +552,7 @@ function addSubQuickRow(){
  const q=quickButtons.find(x=>x.id===lastQuickId); if(!q) return;
  if(!subQuickConfig[q.id]) subQuickConfig[q.id]=[];
  subQuickConfig[q.id].push({emoji:"📌",name:"新規項目"});
- openSubQuickSettings();
+ renderSubQuickRows();
 }
 
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
@@ -543,6 +569,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=12");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=14");
 </script>
 </body></html>
