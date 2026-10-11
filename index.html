@@ -25,10 +25,9 @@ button,input,select{font:inherit}.app{max-width:760px;margin:auto;padding:8px 8p
 .preview-main{width:18px;height:42px;border-radius:7px}
 .preview-sub{width:8px;height:42px;border-radius:5px}
 .preview-text{font-weight:850}.preview-subtext{font-size:13px;color:var(--muted);margin-top:2px}
-.smallbtn{border:1px solid var(--line);background:white;border-radius:11px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:750}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
+.smallbtn{border:1px solid var(--line);background:white;border-radius:11px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:750;cursor:pointer}.smallbtn.danger{color:var(--danger)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}h2{margin:0;font-size:18px}
 label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,select{width:100%;border:1px solid var(--line);background:white;color:var(--text);border-radius:13px;padding:12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{position:relative;height:42px;border-radius:13px;overflow:hidden;background:#f3ece5;border:1px solid var(--line)}.hour-guide{position:absolute;top:0;bottom:0;width:1px;background:rgba(90,75,65,.10);pointer-events:none}.seg{position:absolute;top:0;height:100%
-;min-width:1px;border:0;padding:0 2px;display:flex;align-items:center;justify-content:center;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;cursor:pointer}
+.timeline-label{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;font-size:13px;font-weight:800}.timeline{position:relative;height:42px;border-radius:13px;overflow:hidden;background:#f3ece5;border:1px solid var(--line)}.hour-guide{position:absolute;top:0;bottom:0;width:1px;background:rgba(90,75,65,.10);pointer-events:none}.seg{position:absolute;top:0;height:100%;min-width:1px;border:0;padding:0 2px;display:flex;align-items:center;justify-content:center;color:white;text-shadow:0 1px 2px rgba(0,0,0,.45);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;cursor:pointer}
 .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px}.filter{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:white;padding:7px 10px}.filter.active{outline:2px solid #2c2520}
 .log{border-top:1px solid var(--line);padding:12px 0}.log:first-child{border-top:0}.log-main{display:flex;gap:10px}.swatches{display:flex;gap:3px;padding-top:3px}.swatch{width:15px;height:21px;border-radius:5px}.log-title{font-weight:850}.actions{display:flex;gap:7px;margin-top:8px}.empty{text-align:center;color:var(--muted);padding:20px 6px}
 dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(43,33,26,.35)}.dialog-inner{padding:18px;background:var(--card)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
@@ -184,13 +183,12 @@ const fmtDur=ms=>{
  if(m)return `${m}分${sec}秒`;
  return `${sec}秒`;
 };
-const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`};
+const fmtTimer=ms=>{let s=Math.max(0,Math.floor(ms/1000));return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s\%3600/60))}:${pad(s%60)}`};
 const toLocal=ts=>{const d=new Date(ts);const local=new Date(ts-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)};
 const fromLocal=v=>new Date(v).getTime();
 const getP=(kind,id)=>profiles[kind].find(p=>p.id===id)||null;
 function save(){localStorage.setItem(LOG_KEY,JSON.stringify(logs));localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));else localStorage.removeItem(RUN_KEY)}
 
-// クイックボタンの初期定義
 const quickDefaults=[
  {emoji:"🍚",name:"ご飯",mainName:"生活",subName:"ご飯"},
  {emoji:"🛁",name:"お風呂",mainName:"生活",subName:"お風呂"},
@@ -265,7 +263,6 @@ function renderSubQuick(){
  const q=quickButtons.find(x=>x.id===lastQuickId), section=$("subQuickSection");
  if(!q){section.hidden=true;return;}
  section.hidden=false;
- $("subQuickTitle">`▼ ${q.name} のサブ分類（押すと切り替え）`; // fixed below
  $("subQuickTitle").textContent=`▼ ${q.name} のサブ分類（押すと切り替え）`;
  
  const suggested=SUB_GROUPS[q.name]||[];
@@ -354,119 +351,9 @@ function renderTimeline(kind){
    const start=Math.max(Number(l.start),startMs), end=Math.min(Number(l.end),startMs+dayMs);
    const dur=end-start; if(dur<=0) return "";
    const p=getP(kind,l[kind+"Id"]);
-   return `<button class="seg" onclick="openEdit('${l.id}')" style="left:${(start-startMs)/dayMs*100}%;width:${dur/dayMs*100}%;background:${p?.color||'#ccc'}"></button>`;
+   return `<button class="seg" onclick="openEdit('${l.id}')" style="left:${(start-startMs)/dayMs*100}%;width:${dur/dayMs*100}\%;background:${p?.color||'#ccc'}"></button>`;
  }).join("");
 }
 
 function renderFilters(){
- $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filterMain===p.id?'active':''}" onclick="setFilter('${p.id}',null)"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
- $("subFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.sub].map(p=>`<button class="filter ${filterSub===p.id?'active':''}" onclick="setFilter(null,'${p.id}')"><span class="dot" style="background:${p.color}"></span>${esc(p.name||"名前なし")}</button>`).join("");
-}
-function setFilter(m,s){if(m!==null)filterMain=m;if(s!==null)filterSub=s;renderAll();}
-
-function renderLogs(){
- let list=visibleLogs().slice().reverse();
- if(!list.length){$("logs").innerHTML='<div class="empty">まだ履歴なし</div>';return;}
- $("logs").innerHTML=list.map(l=>{
-   let m=getP("main",l.mainId), s=getP("sub",l.subId);
-   return `<div class="log" onclick="openEdit('${l.id}')"><div class="log-main"><div class="swatches"><span class="swatch" style="background:${m?.color||'#ccc'}"></span>${s?`<span class="swatch" style="background:${s.color}"></span>`:""}</div><div style="flex:1"><div class="log-title">${esc(m?.name||"名前なし")}${s?` ／ ${esc(s.name)}`:""}</div><div class="meta">${esc(l.memo||"内訳なし")}<br>${fmtTime(l.start)}〜${fmtTime(l.end)} ・ ${fmtDur(l.end-l.start)}</div></div></div></div>`;
- }).join("");
-}
-
-function updateRunning(){
- let p=getP("main",running?.mainId||selectedMain), s=getP("sub",running?.subId||selectedSub);
- $("previewMain").style.background=p?.color||"#888";
- $("previewSub").style.background=s?.color||"transparent";
- $("previewSub").style.opacity=s?1:.15;
- $("previewText").textContent=p?.name||"未選択";
- $("previewSubText").textContent=s?`サブ：${s.name}`:"サブなし";
- $("mainBtn").style.background=p?.color||"#555";
- if(running){
-   $("mainBtn").textContent="■ ストップ";
- }else{
-   $("mainBtn").textContent="▶ スタート";
- }
-}
-
-$("mainBtn").onclick=()=>{
- if(running){
-   const now=Date.now();
-   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
-   running=null; save(); renderAll();
- }else{
-   if(!selectedMain) return;
-   running={start:Date.now(),mainId:selectedMain,subId:selectedSub};
-   save(); renderAll();
- }
-};
-
-function openEdit(id){
- let l=logs.find(x=>x.id===id); if(!l) return;
- editId=id;
- $("editMemo").value=l.memo||"";
- $("editStart").value=toLocal(l.start);
- $("editEnd").value=toLocal(l.end);
- $("editMain").innerHTML=profiles.main.map(p=>`<option value="${p.id}" ${p.id===l.mainId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
- $("editSub").innerHTML='<option value="">なし</option>'+profiles.sub.map(p=>`<option value="${p.id}" ${p.id===l.subId?'selected':''}>${esc(p.name||"名前なし")}</option>`).join("");
- $("editDialog").showModal();
-}
-$("saveEdit").onclick=()=>{
- let l=logs.find(x=>x.id===editId);
- let st=fromLocal($("editStart").value), en=fromLocal($("editEnd").value);
- if(!l||!Number.isFinite(st)||!Number.isFinite(en)||en<=st){alert("終了は開始より後にしてください");return;}
- Object.assign(l,{memo:$("editMemo").value.trim(),start:st,end:en,mainId:$("editMain").value,subId:$("editSub").value});
- save(); $("editDialog").close(); renderAll();
-};
-$("clearBtn").onclick=()=>{if(confirm("今日の記録を全部削除しますか？")){logs=logs.filter(l=>todayKey(l.start)!==todayKey());save();renderAll();}};
-$("editLatestBtn").onclick=()=>{let list=todayLogs();if(list.length)openEdit(list[list.length-1].id);else alert("記録がありません");};
-
-function openProfiles(mode){profileMode=mode;$("profilesTitle").textContent=(mode==="main"?"メイン":"サブ")+"の色・名前を編集";renderProfileRows();$("profilesDialog").showModal();}
-function renderProfileRows(){
- $("profileList").innerHTML=profiles[profileMode].map((p,i)=>`
-  <div class="profile-row">
-   <input type="color" value="${p.color}" data-i="${i}" data-k="color">
-   <input value="${escAttr(p.name)}" data-i="${i}" data-k="name" placeholder="名前">
-   <button class="smallbtn danger" onclick="profiles['${profileMode}'].splice(${i},1);renderProfileRows();">削除</button>
-  </div>`).join("");
-}
-$("addProfile").onclick=()=>{profiles[profileMode].push({id:'p_'+Date.now(),name:"",color:"#c85e89"});renderProfileRows();};
-$("saveProfiles").onclick=()=>{
- document.querySelectorAll("#profileList input").forEach(el=>{profiles[profileMode][+el.dataset.i][el.dataset.k]=el.value;});
- save(); $("profilesDialog").close(); renderAll();
-};
-
-function openQuickSettings(){
- $("quickRows").innerHTML=quickButtons.map((q,i)=>`
-   <div class="quick-editor">
-     <label>ボタン ${i+1}（絵文字 / 名前）</label>
-     <div class="row">
-       <input style="width:70px" data-i="${i}" data-k="emoji" value="${escAttr(q.emoji)}">
-       <input style="flex:1" data-i="${i}" data-k="name" value="${escAttr(q.name)}">
-     </div>
-   </div>
- `).join("");
- $("quickRows").querySelectorAll("input").forEach(el=>{
-   el.onchange=()=>quickButtons[+el.dataset.i][el.dataset.k]=el.value;
- });
- $("quickDialog").showModal();
-}
-function saveQuickSettings(){persistQuick(); $("quickDialog").close(); renderAll();}
-function addQuickRow(){quickButtons.push({id:'q_'+Date.now(),emoji:'⭐',name:'新規',mainId:profiles.main[0].id,subId:''});openQuickSettings();}
-
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function escAttr(s){return esc(s)}
-
-function renderAll(){
- renderPickers(); renderFilters(); renderTimeline("main"); renderTimeline("sub"); renderLogs(); updateRunning(); renderQuick();
-}
-
-setInterval(()=>{
- const elapsed=running?Date.now()-Number(running.start):0;
- $("quickTimer").textContent=fmtTimer(elapsed);
- $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
-},250);
-
-renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=3");
-</script>
-</body></html>
+ $("mainFilters").innerHTML=[{id:"all",name:"すべて",color:"#aaa"},...profiles.main].map(p=>`<button class="filter ${filter
