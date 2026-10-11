@@ -46,7 +46,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 .timeline-scale{display:flex;justify-content:space-between;margin:2px 1px 0;color:var(--muted);font-size:10px}
 
 /* One-tap dashboard */
-.quick-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.quick-btn{border:1px solid #eaded5;border-radius:17px;min-height:112px;padding:10px 3px;background:var(--tile,#f6e4e9);color:#302923;font-weight:850;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;box-shadow:0 3px 10px #382b2510}.quick-btn.active{outline:3px solid #b94377;outline-offset:1px}.quick-emoji{font-size:32px;line-height:1.1}.quick-name{font-size:15px;overflow-wrap:anywhere}.quick-actions{display:flex;gap:8px;margin-top:12px}.quick-actions button{flex:1;padding:12px}.quick-stop{background:#fff4f5!important}.quick-setting-row{display:grid;grid-template-columns:45px 1fr 1fr 35px;gap:6px;align-items:center;margin:9px 0}.quick-setting-row input,.quick-setting-row select{width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:9px;background:white}.quick-setting-row input:first-child{text-align:center}.quick-setting-row button{padding:8px 2px}.quick-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}.quick-editor label{display:block;font-size:12px;margin:7px 0 3px}.quick-editor input,.quick-editor select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}.quick-hidden{display:none!important}.quick-muted{font-size:12px;color:var(--muted)}
+.subquick-title{font-weight:800;text-align:left;margin:12px 0 8px}.subquick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.subquick-btn{border:1px solid #eaded5;border-radius:12px;background:#f7f0ea;min-height:76px;padding:5px 2px;font-weight:750;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}.subquick-btn.active{outline:2px solid #b94377}.subquick-emoji{font-size:23px}.subquick-name{font-size:11px;overflow-wrap:anywhere}.quick-stopped{color:#b94377;font-weight:850}.quick-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.quick-btn{border:1px solid #eaded5;border-radius:17px;min-height:112px;padding:10px 3px;background:var(--tile,#f6e4e9);color:#302923;font-weight:850;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;box-shadow:0 3px 10px #382b2510}.quick-btn.active{outline:3px solid #b94377;outline-offset:1px}.quick-emoji{font-size:32px;line-height:1.1}.quick-name{font-size:15px;overflow-wrap:anywhere}.quick-actions{display:flex;gap:8px;margin-top:12px}.quick-actions button{flex:1;padding:12px}.quick-stop{background:#fff4f5!important}.quick-setting-row{display:grid;grid-template-columns:45px 1fr 1fr 35px;gap:6px;align-items:center;margin:9px 0}.quick-setting-row input,.quick-setting-row select{width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:9px;background:white}.quick-setting-row input:first-child{text-align:center}.quick-setting-row button{padding:8px 2px}.quick-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}.quick-editor label{display:block;font-size:12px;margin:7px 0 3px}.quick-editor input,.quick-editor select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}.quick-hidden{display:none!important}.quick-muted{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -56,7 +56,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <section class="card now" id="quickCard">
 <div class="status" id="quickStatus">今の記録</div><div class="timer" id="quickTimer">00:00:00</div>
 <div class="quick-title"><b>よく使う項目</b><button class="smallbtn" onclick="openQuickSettings()">⚙ カスタマイズ</button></div>
-<div class="quick-grid" id="quickGrid"></div>
+<div class="quick-grid" id="quickGrid"></div><div id="subQuickSection" hidden><div class="subquick-title" id="subQuickTitle">サブ</div><div class="subquick-grid" id="subQuickGrid"></div></div>
 <div class="quick-actions"><button class="smallbtn quick-stop" id="quickStop">■ 計測を停止</button><button class="smallbtn" id="quickLatest">直前を編集</button></div>
 <details style="text-align:left;margin-top:12px"><summary>その他の項目・従来の色選択</summary>
 <div class="picker-title"><b>メイン色</b><button class="smallbtn" onclick="openProfiles('main')">＋ 色を追加・編集</button></div>
@@ -397,21 +397,44 @@ function ensureQuickProfile(kind,name){
 let quickButtons=(()=>{try{const saved=JSON.parse(localStorage.getItem(QUICK_KEY));if(Array.isArray(saved))return saved}catch(e){}return quickDefaults.map((q,i)=>({id:"default_"+i,emoji:q.emoji,name:q.name,mainId:ensureQuickProfile("main",q.mainName),subId:ensureQuickProfile("sub",q.subName)}))})();
 function persistQuick(){localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons))}
 function startQuick(id){
- const q=quickButtons.find(q=>q.id===id);if(!q)return;
+ const q=quickButtons.find(q=>q.id===id);if(!q)return;lastQuickId=id;
  if(!profiles.main.some(p=>p.id===q.mainId)){alert("分類のメインが見つかりません。設定から選び直してください");return}
  const now=Date.now();
  if(running){if(now>running.start)logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""})}
  running={start:now,mainId:q.mainId,subId:q.subId||"",memo:""};selectedMain=q.mainId;selectedSub=q.subId||"";pendingId=null;
  $("afterStop").style.display="none";save();renderAll();
 }
+const HOUSE_SUBS=[['🛁','風呂掃除'],['🚽','トイレ掃除'],['🧹','床掃除'],['📦','もの整理'],['🚰','水回り']];
+let lastQuickId=null;
+function renderSubQuick(){
+ const q=quickButtons.find(x=>x.id===lastQuickId);
+ const section=$("subQuickSection");
+ if(!q){section.hidden=true;return}
+ section.hidden=false;$("subQuickTitle").textContent=`${q.name}のサブ（押すと切り替え）`;
+ const subs=profiles.sub.filter(p=>p.id!==q.subId);
+ if(q.name==='家事'){
+  HOUSE_SUBS.forEach(([emoji,name])=>{if(!subs.some(p=>p.name===name)&&!profiles.sub.some(p=>p.name===name)){
+   const p={id:'house_sub_'+name,name,color:'#89b8bb'};profiles.sub.push(p);subs.push(p)
+  }})
+ }
+ $("subQuickGrid").innerHTML=subs.map(p=>{
+  const match=HOUSE_SUBS.find(x=>x[1]===p.name);
+  const emoji=match?match[0]:(p.name.includes('Twitter')?'𝕏':p.name.includes('コメント')?'💬':p.name.includes('寝')?'🌙':p.name.includes('ご飯')?'🍚':p.name.includes('風呂')?'🛁':'✦');
+  return `<button class="subquick-btn ${running&&running.mainId===q.mainId&&running.subId===p.id?'active':''}" data-subquick="${escAttr(p.id)}"><span class="subquick-emoji">${emoji}</span><span class="subquick-name">${esc(p.name)}</span></button>`
+ }).join('');
+ $("subQuickGrid").querySelectorAll('[data-subquick]').forEach(el=>el.onclick=()=>{
+  const now=Date.now();if(running&&now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||''});
+  running={start:now,mainId:q.mainId,subId:el.dataset.subquick,memo:''};selectedMain=q.mainId;selectedSub=el.dataset.subquick;pendingId=null;$("afterStop").style.display='none';save();renderAll();
+ });
+}
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>`<button class="quick-btn ${running&&running.mainId===q.mainId&&running.subId===(q.subId||"")?'active':''}" data-quick="${escAttr(q.id)}"><span class="quick-emoji">${esc(q.emoji||'●')}</span><span class="quick-name">${esc(q.name)}</span></button>`).join("");
  $("quickGrid").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>startQuick(el.dataset.quick));
- $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"今の記録";
+ $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
  $("quickTimer").textContent=running?fmtTimer(Date.now()-running.start):"00:00:00";
- $("quickStop").disabled=!running;
+ $("quickStop").disabled=!running;$("quickStop").textContent=running?"■ 計測を停止":"✓ 停止しました";renderSubQuick();
 }
-$("quickStop").onclick=()=>{if(running)stopTimer();renderQuick()};
+$("quickStop").onclick=()=>{if(running){stopTimer();lastQuickId=null;}renderQuick()};
 $("quickLatest").onclick=()=>{const l=logs.slice().sort((a,b)=>b.end-a.end)[0];if(l)openEdit(l.id);else alert("編集できる記録がありません")};
 function quickOptions(kind,id){return '<option value="">'+(kind==="sub"?'サブなし':'選択してください')+'</option>'+profiles[kind].map(p=>`<option value="${escAttr(p.id)}" ${p.id===id?'selected':''}>${esc(p.name||'名前なし')}</option>`).join('')}
 let quickDraft=[];
