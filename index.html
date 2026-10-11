@@ -298,11 +298,29 @@ function renderSubQuick(){
 
 function renderQuick(){
  $("quickGrid").innerHTML=quickButtons.map(q=>`
-   <button class="quick-btn ${running && running.mainId===q.mainId && (!q.subId || running.subId===q.subId) ? 'active':''}" data-quick="${q.id}">
+   <button class="quick-btn ${running && running.mainId===q.mainId && (!q.subId || running.subId===q.subId || (q.name==="家事" && running.mainId===q.mainId)) ? 'active':''}" data-quick="${q.id}">
      <span class="quick-emoji">${esc(q.emoji||'●')}</span>
      <span class="quick-name">${esc(q.name)}</span>
    </button>
  `).join("");
+ // 修正：現在実行中のメインIDが一致しており、かつサブが「指定なし」または「今回のメインのデフォルトサブ」のときだけに絞るため、判定を厳密にします
+ $("quickGrid").innerHTML=quickButtons.map(q=>{
+   let isActive = false;
+   if(running && running.mainId === q.mainId) {
+     if(!q.subId || q.subId === running.subId) isActive = true;
+     // 家事やご飯などで、親ボタン自体をアクティブにする条件
+     if(q.name === "家事" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "ご飯" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "お風呂" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "ネーム" && running.mainId === q.mainId) isActive = true;
+     if(q.name === "睡眠" && running.mainId === q.mainId) isActive = true;
+   }
+   return `<button class="quick-btn ${isActive ? 'active':''}" data-quick="${q.id}">
+     <span class="quick-emoji">${esc(q.emoji||'●')}</span>
+     <span class="quick-name">${esc(q.name)}</span>
+   </button>`;
+ }).join("");
+
  $("quickGrid").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>startQuick(el.dataset.quick));
  
  $("quickStatus").textContent=running?`計測中：${getP("sub",running.subId)?.name||getP("main",running.mainId)?.name||"記録"}`:"■ 停止中";
@@ -464,6 +482,6 @@ setInterval(()=>{
 },250);
 
 renderAll();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=4");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js?v=5");
 </script>
 </body></html>
