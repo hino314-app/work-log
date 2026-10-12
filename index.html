@@ -71,7 +71,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <body>
 <div class="app">
 <header>
-  <h1>時間の塊 <span class="version-tag">v28</span></h1>
+  <h1>時間の塊 <span class="version-tag">v33</span></h1>
   <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
 </header>
 
@@ -118,6 +118,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
     <div class="row" style="margin-top:9px"><button class="smallbtn" id="saveMemoBtn">保存</button><button class="smallbtn" id="skipMemoBtn">未入力で保存</button></div>
   </div>
 </details>
+<div style="text-align:right;margin-top:10px"><button class="smallbtn" type="button" onclick="downloadBackup()">設定・記録をバックアップ</button></div>
 <details class="install"><summary><b>ホーム画面への置き方</b></summary><div class="hint">Safariの共有ボタンから「ホーム画面に追加」。</div></details>
 </section>
 
@@ -183,6 +184,27 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 const $=id=>document.getElementById(id);
 const LOG_KEY="work_logs_v2", RUN_KEY="running_timer_v2", PROFILE_KEY="work_profiles_v2", QUICK_KEY="work_quick_buttons_v1", SUB_QUICK_KEY="work_sub_quick_buttons_v3", LAST_RUN_KEY="last_stopped_timer_v1";
 
+// A persistent pre-update snapshot; never overwrite an existing backup.
+const V31_BACKUP='work_full_backup_before_v31';
+const STORAGE_KEYS=['work_logs_v2','running_timer_v2','work_profiles_v2','work_quick_buttons_v1','work_sub_quick_buttons_v3','last_stopped_timer_v1'];
+try {
+ if(!localStorage.getItem(V31_BACKUP)) {
+  const snapshot={version:'before-v31',savedAt:new Date().toISOString(),values:{}};
+  for(const key of STORAGE_KEYS)snapshot.values[key]=localStorage.getItem(key);
+  localStorage.setItem(V31_BACKUP,JSON.stringify(snapshot));
+ }
+}catch(error){
+ alert('保存データのバックアップに失敗しました。安全のため更新を中止します。');
+ throw error;
+}
+function downloadBackup(){
+ const data={version:'v31',savedAt:new Date().toISOString(),values:{}};
+ for(const key of STORAGE_KEYS)data.values[key]=localStorage.getItem(key);
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='時間の塊_バックアップ_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
 const defaultProfiles={
  main:[
   {id:"blue",name:"青木さん",color:"#3777c8"},
@@ -314,7 +336,7 @@ function restoreV28Backup(backup){
  if(backup.raw.sub===null)localStorage.removeItem(SUB_QUICK_KEY);else localStorage.setItem(SUB_QUICK_KEY,backup.raw.sub);
  if(backup.raw.profiles===null)localStorage.removeItem(PROFILE_KEY);else localStorage.setItem(PROFILE_KEY,backup.raw.profiles);
 }
-if(localStorage.getItem(V28_MIGRATION)!=='yes'){
+if(false && localStorage.getItem(V28_MIGRATION)!=='yes' && localStorage.getItem('work_unique_quick_main_v29_applied')!=='yes'){
  try{
   const previous=quickButtons.map(q=>({...q}));
   const rawSub=localStorage.getItem(SUB_QUICK_KEY);
@@ -357,7 +379,7 @@ if(localStorage.getItem(V28_MIGRATION)!=='yes'){
    if(/Twitter|ツイート|閲覧|投稿/.test(name))return 'Twitter';
    if(/返信|メール|コメント/.test(name))return '返信';
    if(/仕事|作業|連絡/.test(name))return '仕事';
-   return '家事';
+   return null;
   };
   const keptIds=new Set(next.map(q=>q.id));
   for(const old of source){
@@ -365,7 +387,7 @@ if(localStorage.getItem(V28_MIGRATION)!=='yes'){
    for(const entry of oldSub[old.id]){
     if(!entry || typeof entry.name!=='string' || !entry.name.trim())continue;
     const dest=next.find(q=>q.name===targetForSub(entry.name));
-    if(!dest)continue;
+    if(!dest)continue; // Keep unmapped legacy entries under their original saved key.
     const items=nextSub[dest.id];
     if(!items.some(s=>s.name===entry.name))items.push({...entry});
    }
@@ -419,10 +441,155 @@ let subQuickConfig=(()=>{
 // Only seed missing group configurations; retain all user-edited sub groups.
 for(const q of quickButtons){
  if(!Array.isArray(subQuickConfig[q.id])){
-   subQuickConfig[q.id]=(SUB_GROUPS[q.name]||[]).map(([emoji,name])=>({emoji,name}));
+   subQuickConfig[q.id]=[];
  }
 }
 localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(subQuickConfig));
+// v30: Recover missing sub profiles without replacing any user's saved sub lists.
+// Back up first; this is additive and never changes a sub button's parent or order.
+const V30_SUB_REPAIR='work_sub_profile_repair_v30';
+if(localStorage.getItem(V30_SUB_REPAIR)!=='yes'){
+ try{
+  const backup={profiles:localStorage.getItem(PROFILE_KEY),sub:localStorage.getItem(SUB_QUICK_KEY)};
+  localStorage.setItem('work_sub_profile_backup_v30',JSON.stringify(backup));
+  for(const entries of Object.values(subQuickConfig)){
+   if(!Array.isArray(entries))continue;
+   for(const entry of entries){if(entry && typeof entry.name==='string' && entry.name.trim())ensureProfile('sub',entry.name.trim());}
+  }
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+  localStorage.setItem(V30_SUB_REPAIR,'yes');
+ }catch(e){console.error('Sub profile recovery aborted',e);}
+}
+// v30: Each visible main button has its own stable category ID. Do not alter
+// existing log categories; older records remain available in the editor.
+const V29_MIGRATION='work_unique_quick_main_v29_applied';
+const V29_BACKUP='work_unique_quick_main_v29_backup';
+function mainProfileForQuick(q){
+ const id='quick_main_'+q.id;
+ let p=getP('main',id);
+ if(!p){
+   const original=getP('main',q.mainId);
+   p={id,name:q.name,color:original?.color||'#c85e89'};
+   profiles.main.push(p);
+ }
+ return p;
+}
+if(localStorage.getItem(V29_MIGRATION)!=='yes'){
+ const snapshot={quick:localStorage.getItem(QUICK_KEY),profiles:localStorage.getItem(PROFILE_KEY),sub:localStorage.getItem(SUB_QUICK_KEY),logs:localStorage.getItem(LOG_KEY),running:localStorage.getItem(RUN_KEY),last:localStorage.getItem(LAST_RUN_KEY)};
+ try{
+  localStorage.setItem(V29_BACKUP,JSON.stringify(snapshot));
+  for(const q of quickButtons){
+   const p=mainProfileForQuick(q);
+   q.mainId=p.id;
+  }
+  // Only reclassify an active timer when its originating button is known.
+  if(running?.quickId){
+   const q=quickButtons.find(x=>x.id===running.quickId);
+   if(q)running.mainId=q.mainId;
+  }
+  if(lastStopped?.quickId){
+   const q=quickButtons.find(x=>x.id===lastStopped.quickId);
+   if(q)lastStopped.mainId=q.mainId;
+  }
+  // Historical logs without quickId cannot be safely guessed from a broad
+  // category such as 生活; keep their original classification and allow editing.
+  for(const log of logs){
+   if(!log.quickId)continue;
+   const q=quickButtons.find(x=>x.id===log.quickId);
+   if(q)log.mainId=q.mainId;
+  }
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+  localStorage.setItem(QUICK_KEY,JSON.stringify(quickButtons));
+  localStorage.setItem(LOG_KEY,JSON.stringify(logs));
+  if(running)localStorage.setItem(RUN_KEY,JSON.stringify(running));
+  if(lastStopped)localStorage.setItem(LAST_RUN_KEY,JSON.stringify(lastStopped));
+  localStorage.setItem(V29_MIGRATION,'yes');
+ }catch(error){
+  console.error('v29 migration failed',error);
+  for(const [k,v] of Object.entries({[QUICK_KEY]:snapshot.quick,[PROFILE_KEY]:snapshot.profiles,[SUB_QUICK_KEY]:snapshot.sub,[LOG_KEY]:snapshot.logs,[RUN_KEY]:snapshot.running,[LAST_RUN_KEY]:snapshot.last})){
+   try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){console.error('restore failed',k,e)}
+  }
+  // Fail closed: do not continue with an inconsistent in-memory migration.
+  window.alert('設定の安全な移行に失敗しました。元のデータを保持しています。再読み込みしてください。');
+  window.location.reload();
+  throw error;
+ }
+}
+// v32: apply the user's eleven-category layout without deleting old groups or logs.
+// Old sub groups remain under their original IDs for recovery and historical editing.
+const V32_LAYOUT_KEY='work_layout_11_v32_applied';
+const V32_LAYOUT_BACKUP='work_layout_11_v32_backup';
+if(localStorage.getItem(V32_LAYOUT_KEY)!=='yes'){
+ const before={quick:localStorage.getItem(QUICK_KEY),sub:localStorage.getItem(SUB_QUICK_KEY),profiles:localStorage.getItem(PROFILE_KEY),logs:localStorage.getItem(LOG_KEY),running:localStorage.getItem(RUN_KEY),last:localStorage.getItem(LAST_RUN_KEY)};
+ try{
+  if(!localStorage.getItem(V32_LAYOUT_BACKUP)){
+   localStorage.setItem(V32_LAYOUT_BACKUP,JSON.stringify({savedAt:new Date().toISOString(),values:before}));
+   if(!localStorage.getItem(V32_LAYOUT_BACKUP))throw Error('Backup missing');
+  }
+  const desired=[['ご飯','🍚'],['生活','🏠'],['ネーム','✍️'],['仕事','💻'],['Twitter','𝕏'],['イラスト','🎨'],['睡眠','🌙'],['家事','🧹'],['青木さん','💙'],['遊び',''],['その他','']];
+  const originals=quickButtons.map(q=>({...q}));
+  const used=new Set();
+  const ordered=desired.map(([name,emoji])=>{
+   let q=originals.find(x=>x.name===name&&!used.has(x.id));
+   if(q){used.add(q.id);return q;}
+   const id='v32_main_'+({生活:'life',遊び:'play',その他:'other'}[name]||name);
+   const p=getP('main','quick_main_'+id);
+   if(!p)profiles.main.push({id:'quick_main_'+id,name,color:'#c85e89'});
+   return {id,name,emoji,mainId:'quick_main_'+id,subId:''};
+  });
+  // Do not discard user-added categories. Hide only two obsolete defaults.
+  const excluded=new Set(['お風呂','返信']);
+  for(const q of originals)if(!used.has(q.id)&&!excluded.has(q.name))ordered.push(q);
+  const groups={
+   'ネーム':[['💻','プロット'],['✍️','ミニネーム'],['✍️','ネーム']],
+   'Twitter':[['💬','返信'],['💬','ポスト考え'],['📱','タイムライン']],
+   '青木さん':[['💬','コメント'],['📺','ドラマ、映画、バラエティ']],
+   'その他':[['📲','アプリ改善'],['📱','ChatGPT']]
+  };
+  const nextSub={...subQuickConfig};
+  for(const q of ordered){
+   if(!Array.isArray(nextSub[q.id]))nextSub[q.id]=[];
+   const specified=groups[q.name];if(!specified)continue;
+   const existing=nextSub[q.id];
+   // Named items are updated in place, retaining extra properties and stable IDs.
+   const first=specified.map(([emoji,name])=>{
+    const match=existing.find(e=>e&&e.name===name);
+    return match?{...match,emoji,name}:{emoji,name};
+   });
+   const names=new Set(specified.map(x=>x[1]));
+   nextSub[q.id]=[...first,...existing.filter(e=>!e||!names.has(e.name))];
+   for(const [,name] of specified)ensureProfile('sub',name);
+  }
+  // Write data before the one-time completion marker; rollback on any failure.
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+  localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(nextSub));
+  localStorage.setItem(QUICK_KEY,JSON.stringify(ordered));
+  localStorage.setItem(V32_LAYOUT_KEY,'yes');
+  quickButtons=ordered;subQuickConfig=nextSub;
+ }catch(e){
+  for(const [k,v] of [[QUICK_KEY,before.quick],[SUB_QUICK_KEY,before.sub],[PROFILE_KEY,before.profiles]]){
+   try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(_){}
+  }
+  alert('設定を安全に更新できませんでした。元の設定を保持しています。');
+  throw e;
+ }
+}
+const legacyQuickButtons=(()=>{
+ const active=new Set(quickButtons.map(q=>q.id));
+ const backups=[V31_BACKUP,V32_LAYOUT_BACKUP,V29_BACKUP,V28_BACKUP];
+ const old=[];
+ for(const key of backups){
+  try{const b=JSON.parse(localStorage.getItem(key)||'null');
+   const raw=b?.values?.[QUICK_KEY]??b?.quick??b?.raw?.quick;
+   const arr=typeof raw==='string'?JSON.parse(raw):raw;
+   if(Array.isArray(arr))for(const q of arr){
+    if(q&&q.id&&!active.has(q.id)&&Array.isArray(subQuickConfig[q.id])&&!old.some(x=>x.id===q.id))old.push(q);
+   }
+  }catch(e){}
+ }
+ return old;
+})();
+const selectableQuick=()=>[...quickButtons,...legacyQuickButtons];
 function persistSubQuick(){localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(subQuickConfig));}
 
 let lastQuickId=null;
@@ -439,7 +606,7 @@ function startQuick(id){
  lastQuickId=id;
  const now=Date.now();
  if(running && now>running.start){
-   logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||""});
+   logs.push({id:String(now)+"_"+Math.random().toString(36).slice(2,5),start:running.start,end:now,mainId:running.mainId,subId:running.subId,quickId:running.quickId||"",memo:running.memo||""});
  }
  running={start:now,mainId:q.mainId,subId:q.subId||"",quickId:q.id,memo:""};
  lastStopped=null;
@@ -452,12 +619,12 @@ function renderSubQuick(){
  const section=$('subQuickSection');
  if(!quickButtons.length){section.hidden=true;return;}
  section.hidden=false;
- let q=quickButtons.find(x=>x.id===lastQuickId);
+ let q=selectableQuick().find(x=>x.id===lastQuickId);
  if(!q){q=quickButtons[0];lastQuickId=q.id;}
  const selector=$('subTargetSelect');
- const signature=quickButtons.map(x=>x.id+':'+x.name).join('|');
+ const signature=selectableQuick().map(x=>x.id+':'+x.name).join('|');
  if(selector.dataset.signature!==signature){
-   selector.innerHTML=quickButtons.map(x=>`<option value="${escAttr(x.id)}">${esc(x.emoji||'')} ${esc(x.name)}</option>`).join('');
+   selector.innerHTML=selectableQuick().map(x=>`<option value="${escAttr(x.id)}">${esc(x.emoji||'')} ${esc(x.name)}</option>`).join('');
    selector.dataset.signature=signature;
  }
  selector.value=q.id;
@@ -472,7 +639,7 @@ function renderSubQuick(){
    const subName=el.dataset.subname;
    const subId=ensureProfile('sub',subName);
    const now=Date.now();
-   if(running && now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,6),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:running.memo||''});
+   if(running && now>running.start)logs.push({id:String(now)+'_'+Math.random().toString(36).slice(2,6),start:running.start,end:now,mainId:running.mainId,subId:running.subId,quickId:running.quickId||"",memo:running.memo||''});
    running={start:now,mainId:q.mainId,subId,quickId:q.id,memo:''};
    lastStopped=null;selectedMain=q.mainId;selectedSub=subId;save();renderAll();
  });
@@ -514,7 +681,7 @@ $("quickStop").onclick=()=>{
  if(running){
    const now=Date.now();
    const dur = now - running.start;
-   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,quickId:running.quickId||"",memo:""});
    lastStopped={quickId:running.quickId||"", mainId:running.mainId, subId:running.subId, duration:dur};
    running=null; save(); renderAll();
  }
@@ -531,8 +698,11 @@ function chipHTML(p,selected,kind){
 }
 
 function renderPickers(){
- $("mainPicker").innerHTML=profiles.main.map(p=>chipHTML(p,selectedMain,"main")).join("");
- $("subPicker").innerHTML=profiles.sub.map(p=>chipHTML(p,selectedSub,"sub")).join("");
+ $("mainPicker").innerHTML=quickButtons.map(q=>getP("main",q.mainId)).filter(Boolean).map(p=>chipHTML(p,selectedMain,"main")).join("");
+ const activeQuick=quickButtons.find(q=>q.mainId===selectedMain);
+ const subNames=new Set((activeQuick?subQuickConfig[activeQuick.id]||[]:[]).map(x=>x.name));
+ const availableSubs=profiles.sub.filter(p=>subNames.has(p.name)||(selectedSub&&p.id===selectedSub));
+ $("subPicker").innerHTML=availableSubs.map(p=>chipHTML(p,selectedSub,"sub")).join("");
  [...$("mainPicker").children].forEach(b=>b.onclick=()=>{if(!running){selectedMain=b.dataset.id;renderAll();}});
  [...$("subPicker").children].forEach(b=>b.onclick=()=>{selectedSub=selectedSub===b.dataset.id?"":b.dataset.id;if(running){running.subId=selectedSub;save();}renderAll();});
 }
@@ -589,7 +759,7 @@ $("mainBtn").onclick=()=>{
  if(running){
    const now=Date.now();
    const dur = now - running.start;
-   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,memo:""});
+   logs.push({id:String(now),start:running.start,end:now,mainId:running.mainId,subId:running.subId,quickId:running.quickId||"",memo:""});
    lastStopped={quickId:running.quickId||"", mainId:running.mainId, subId:running.subId, duration:dur};
    running=null; save(); renderAll();
  }else{
@@ -600,31 +770,47 @@ $("mainBtn").onclick=()=>{
  }
 };
 
-function editSubOptions(mainId, selected=''){
- const names=new Set();
- quickButtons.filter(q=>q.mainId===mainId).forEach(q=>{
-   if(q.subId){const p=getP('sub',q.subId);if(p)names.add(p.name);}
-   (subQuickConfig[q.id]||[]).forEach(s=>names.add(s.name));
- });
- const options=profiles.sub.filter(p=>names.has(p.name)||p.id===selected);
- $('editSub').innerHTML='<option value="">なし</option>'+options.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('');
- $('editSub').value=selected;
+function editSubOptions(mainId, selected='', preserveHistorical=false){
+ const q=quickButtons.find(x=>x.mainId===mainId);
+ const allowed=new Set();
+ if(q){
+  if(q.subId)allowed.add(q.subId);
+  for(const item of subQuickConfig[q.id]||[]){
+   const p=profiles.sub.find(p=>p.name===item.name);
+   if(p)allowed.add(p.id);
+  }
+ }else{
+  // Historical category: retain its original sub for editing, without
+  // guessing a mapping to an unrelated visible button.
+  for(const p of profiles.sub)allowed.add(p.id);
+ }
+ if(selected && (preserveHistorical || !q))allowed.add(selected);
+const orderedSubs=q ? [...(subQuickConfig[q.id]||[]).map(item=>profiles.sub.find(p=>p.name===item.name)), ...(q.subId?[getP('sub',q.subId)]:[])].filter(Boolean) : profiles.sub;
+ const visibleSubs=[...new Map(orderedSubs.filter(p=>allowed.has(p.id)).map(p=>[p.id,p])).values()];
+ if(selected && preserveHistorical && getP('sub',selected) && !visibleSubs.some(p=>p.id===selected))visibleSubs.push(getP('sub',selected));
+  $('editSub').innerHTML='<option value="">なし</option>'+visibleSubs.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('')+(selected && preserveHistorical && !getP('sub',selected)?`<option value="${escAttr(selected)}">以前のサブ (${esc(selected)})</option>`:'');
+ $('editSub').value=selected&&allowed.has(selected)?selected:'';
 }
 $('editMain').onchange=()=>editSubOptions($('editMain').value);
 function openEdit(id){
  const l=logs.find(x=>x.id===id);if(!l)return;
- editId=id;$('editMemo').value=l.memo||'';$('editStart').value=toLocal(l.start);$('editEnd').value=toLocal(l.end);
- $('editMain').innerHTML=profiles.main.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name||'名前なし')}</option>`).join('');
+ editId=id;$('editMemo').value=l.memo||'';$('editStart').value=toLocal(l.start);$('editEnd').value=toLocal(l.end);$('editStart').dataset.original=$('editStart').value;$('editEnd').dataset.original=$('editEnd').value;
+ const activeIds=new Set(quickButtons.map(q=>q.mainId));
+ const mains=quickButtons.map(q=>getP('main',q.mainId)).filter(Boolean);
+ const historical=getP('main',l.mainId);
+ if(historical&&!activeIds.has(historical.id))mains.push(historical);
+ if(!historical && l.mainId)mains.push({id:l.mainId,name:'以前の分類（'+l.mainId+'）'});
+ $('editMain').innerHTML=mains.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name||'名前なし')}</option>`).join('');
  $('editMain').value=l.mainId;
- editSubOptions(l.mainId,l.subId);
+ editSubOptions(l.mainId,l.subId,true);
  $('editDialog').showModal();
 }
 
 $("saveEdit").onclick=()=>{
  let l=logs.find(x=>x.id===editId);
- let st=fromLocal($("editStart").value), en=fromLocal($("editEnd").value);
+ let st=$("editStart").value===$("editStart").dataset.original?l?.start:fromLocal($("editStart").value), en=$("editEnd").value===$("editEnd").dataset.original?l?.end:fromLocal($("editEnd").value);
  if(!l||!Number.isFinite(st)||!Number.isFinite(en)||en<=st){alert("終了は開始より後にしてください");return;}
- Object.assign(l,{memo:$("editMemo").value.trim(),start:st,end:en,mainId:$("editMain").value,subId:$("editSub").value});
+ Object.assign(l,{memo:$("editMemo").value.trim(),start:st,end:en,mainId:$("editMain").value,subId:$("editSub").value,quickId:quickButtons.find(q=>q.mainId===$("editMain").value)?.id||(l.mainId===$("editMain").value?l.quickId:"")});
  save(); $("editDialog").close(); renderAll();
 };
 $("clearBtn").onclick=()=>{if(confirm("今日の記録を全部削除しますか？")){logs=logs.filter(l=>todayKey(l.start)!==todayKey());save();renderAll();}};
@@ -674,17 +860,25 @@ function executeSaveQuick(){
    const name=q.name.trim();
    const prior=quickButtons.find(old=>old.id===q.id);
    // Keep original stable id, main/sub linkage, and sub customization.
-   const mainId=prior?.mainId||ensureProfile('main',name);
-   return {...q,id:q.id||freshId('q_'),name,emoji:q.emoji||guessEmoji(name),mainId,subId:prior?.subId||''};
+   const id=q.id||freshId('q_');
+   const mainId='quick_main_'+id;
+   let p=getP('main',mainId);
+   if(!p){const base=getP('main',prior?.mainId);p={id:mainId,name,color:base?.color||'#c85e89'};profiles.main.push(p)}
+   p.name=name;
+   return {...q,id,name,emoji:q.emoji||guessEmoji(name),mainId,subId:prior?.subId||''};
  });
  if(!cleaned.length){alert('最低1つの項目を残してください');return;}
- quickButtons=cleaned;persistQuick();save();$('quickDialog').close();
+ try{
+  localStorage.setItem(QUICK_KEY,JSON.stringify(cleaned));
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+ }catch(error){alert('メイン項目を保存できませんでした。以前の設定は保持されています。');return;}
+ quickButtons=cleaned;save();$('quickDialog').close();
  if(!quickButtons.some(q=>q.id===lastQuickId))lastQuickId=quickButtons[0].id;
  renderAll();
 }
 $('saveQuickBtn').onclick=executeSaveQuick;$('saveQuickBtnTop').onclick=executeSaveQuick;
 function openSubQuickSettings(){
- const q=quickButtons.find(x=>x.id===lastQuickId);if(!q)return;
+ const q=selectableQuick().find(x=>x.id===lastQuickId);if(!q)return;
  subEditingId=q.id;subDraft=(subQuickConfig[q.id]||[]).map(item=>({...item}));renderSubQuickRows();$('subQuickDialog').showModal();
 }
 function renderSubQuickRows(){
@@ -694,12 +888,16 @@ function renderSubQuickRows(){
 }
 function addSubQuickRow(){subDraft=readDraftRows('sub');subDraft.push({emoji:'📌',name:''});renderSubQuickRows();}
 function executeSaveSubQuick(){
- if(!quickButtons.some(q=>q.id===subEditingId)){alert('編集対象が見つかりません');return;}
+ if(!selectableQuick().some(q=>q.id===subEditingId)){alert('編集対象が見つかりません');return;}
  subDraft=readDraftRows('sub');
- const items=subDraft.filter(item=>item.name.trim()).map(item=>({name:item.name.trim(),emoji:item.emoji||guessEmoji(item.name)}));
- subQuickConfig[subEditingId]=items;
+ const items=subDraft.filter(item=>item.name.trim()).map(item=>({...item,name:item.name.trim(),emoji:item.emoji||guessEmoji(item.name)}));
+ const next={...subQuickConfig,[subEditingId]:items};
+ try{
+  localStorage.setItem(SUB_QUICK_KEY,JSON.stringify(next));
+ }catch(error){alert('サブ項目を保存できませんでした。以前の設定は保持しています。');return;}
+ subQuickConfig=next;
  items.forEach(item=>ensureProfile('sub',item.name));
- persistSubQuick();save();$('subQuickDialog').close();renderAll();
+ save();$('subQuickDialog').close();renderAll();
 }
 $('saveSubQuickBtn').onclick=executeSaveSubQuick;$('saveSubQuickBtnTop').onclick=executeSaveSubQuick;
 
@@ -723,7 +921,7 @@ renderAll();
 if("serviceWorker" in navigator) {
  let swReloaded=false;
  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!swReloaded){swReloaded=true;window.location.reload();}});
-  navigator.serviceWorker.register("./sw.js?v=28").then(reg => {
+  navigator.serviceWorker.register("./sw.js?v=33").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {
