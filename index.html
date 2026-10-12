@@ -71,7 +71,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 <body>
 <div class="app">
 <header>
-  <h1>時間の塊 <span class="version-tag">v33</span></h1>
+  <h1>時間の塊 <span class="version-tag">v34</span></h1>
   <div class="sub">色は一覧からワンタップ。時間バーは今日の24時間で表示し、記録していない時間は空欄になります。</div>
 </header>
 
@@ -140,7 +140,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(94vw,540px);box-shadow:0 
 </div>
 
 <dialog id="editDialog"><div class="dialog-inner">
-<h2>記録を編集</h2>
+<h2 id="editDialogTitle">記録を編集</h2>
 <label>内訳・メモ</label><input id="editMemo">
 <label>開始</label><input id="editStart" type="datetime-local">
 <label>終了</label><input id="editEnd" type="datetime-local">
@@ -647,6 +647,7 @@ function renderSubQuick(){
 $('subTargetSelect').onchange=()=>{lastQuickId=$('subTargetSelect').value;renderSubQuick();};
 
 function renderQuick(){
+ $("quickLatest").textContent=running?'計測中を編集':'直前を編集';
  $("quickGrid").innerHTML=quickButtons.map(q=>{
    let isActive = false;
    if(running && running.quickId && running.quickId === q.id) {
@@ -688,6 +689,9 @@ $("quickStop").onclick=()=>{
 };
 
 $("quickLatest").onclick=()=>{
+ // The quick-access edit button follows the currently running timer.
+ // Completed records remain editable from Today's History.
+ if(running){openRunningEdit();return;}
  const l=logs.slice().sort((a,b)=>b.end-a.end)[0];
  if(l) openEdit(l.id); else alert("編集できる記録がありません");
 };
@@ -770,6 +774,16 @@ $("mainBtn").onclick=()=>{
  }
 };
 
+function editMainLabel(p){
+ const q=quickButtons.find(q=>q.mainId===p.id);
+ const emoji=q?.emoji||'';
+ return (emoji?emoji+' ':'')+(p.name||'名前なし');
+}
+function editSubLabel(mainId,p){
+ const q=quickButtons.find(q=>q.mainId===mainId);
+ const entry=q?(subQuickConfig[q.id]||[]).find(x=>x.name===p.name):null;
+ return (entry?.emoji?entry.emoji+' ':'')+(p.name||'名前なし');
+}
 function editSubOptions(mainId, selected='', preserveHistorical=false){
  const q=quickButtons.find(x=>x.mainId===mainId);
  const allowed=new Set();
@@ -788,25 +802,47 @@ function editSubOptions(mainId, selected='', preserveHistorical=false){
 const orderedSubs=q ? [...(subQuickConfig[q.id]||[]).map(item=>profiles.sub.find(p=>p.name===item.name)), ...(q.subId?[getP('sub',q.subId)]:[])].filter(Boolean) : profiles.sub;
  const visibleSubs=[...new Map(orderedSubs.filter(p=>allowed.has(p.id)).map(p=>[p.id,p])).values()];
  if(selected && preserveHistorical && getP('sub',selected) && !visibleSubs.some(p=>p.id===selected))visibleSubs.push(getP('sub',selected));
-  $('editSub').innerHTML='<option value="">なし</option>'+visibleSubs.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('')+(selected && preserveHistorical && !getP('sub',selected)?`<option value="${escAttr(selected)}">以前のサブ (${esc(selected)})</option>`:'');
+  $('editSub').innerHTML='<option value="">なし</option>'+visibleSubs.map(p=>`<option value="${escAttr(p.id)}">${esc(editSubLabel(mainId,p))}</option>`).join('')+(selected && preserveHistorical && !getP('sub',selected)?`<option value="${escAttr(selected)}">以前のサブ (${esc(selected)})</option>`:'');
  $('editSub').value=selected&&allowed.has(selected)?selected:'';
 }
 $('editMain').onchange=()=>editSubOptions($('editMain').value);
+function openRunningEdit(){
+ if(!running)return;
+ // No completed record exists yet. Edit the active timer without creating a log.
+ openEditForm({...running,end:Date.now()},'__running__');
+}
 function openEdit(id){
  const l=logs.find(x=>x.id===id);if(!l)return;
- editId=id;$('editMemo').value=l.memo||'';$('editStart').value=toLocal(l.start);$('editEnd').value=toLocal(l.end);$('editStart').dataset.original=$('editStart').value;$('editEnd').dataset.original=$('editEnd').value;
+ openEditForm(l,id);
+}
+function openEditForm(l,id){
+ const isRunning=id==='__running__';
+ editId=id;
+ $('editDialogTitle').textContent=isRunning?'計測中の項目を編集':'記録を編集';
+ $('editEnd').disabled=isRunning;
+ $('editMemo').value=l.memo||'';$('editStart').value=toLocal(l.start);$('editEnd').value=toLocal(l.end);$('editStart').dataset.original=$('editStart').value;$('editEnd').dataset.original=$('editEnd').value;
  const activeIds=new Set(quickButtons.map(q=>q.mainId));
  const mains=quickButtons.map(q=>getP('main',q.mainId)).filter(Boolean);
  const historical=getP('main',l.mainId);
  if(historical&&!activeIds.has(historical.id))mains.push(historical);
  if(!historical && l.mainId)mains.push({id:l.mainId,name:'以前の分類（'+l.mainId+'）'});
- $('editMain').innerHTML=mains.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name||'名前なし')}</option>`).join('');
+ $('editMain').innerHTML=mains.map(p=>`<option value="${escAttr(p.id)}">${esc(editMainLabel(p))}</option>`).join('');
  $('editMain').value=l.mainId;
  editSubOptions(l.mainId,l.subId,true);
  $('editDialog').showModal();
 }
 
 $("saveEdit").onclick=()=>{
+ if(editId==='__running__'){
+  if(!running){alert('計測が終了しています。もう一度開いてください。');return;}
+  const start=$('editStart').value===$('editStart').dataset.original?running.start:fromLocal($('editStart').value);
+  if(!Number.isFinite(start)||start>=Date.now()){alert('開始時刻を確認してください');return;}
+  const mainId=$('editMain').value;
+  const q=quickButtons.find(q=>q.mainId===mainId);
+  Object.assign(running,{start,mainId,subId:$('editSub').value,quickId:q?.id||'',memo:$('editMemo').value.trim()});
+  selectedMain=mainId;selectedSub=running.subId;
+  save();$('editDialog').close();renderAll();return;
+ }
  let l=logs.find(x=>x.id===editId);
  let st=$("editStart").value===$("editStart").dataset.original?l?.start:fromLocal($("editStart").value), en=$("editEnd").value===$("editEnd").dataset.original?l?.end:fromLocal($("editEnd").value);
  if(!l||!Number.isFinite(st)||!Number.isFinite(en)||en<=st){alert("終了は開始より後にしてください");return;}
@@ -921,7 +957,7 @@ renderAll();
 if("serviceWorker" in navigator) {
  let swReloaded=false;
  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!swReloaded){swReloaded=true;window.location.reload();}});
-  navigator.serviceWorker.register("./sw.js?v=33").then(reg => {
+  navigator.serviceWorker.register("./sw.js?v=34").then(reg => {
     reg.onupdatefound = () => {
       const installingWorker = reg.installing;
       installingWorker.onstatechange = () => {
